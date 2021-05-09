@@ -42,13 +42,17 @@ protected:
 	wxTextCtrl* m_textCtrl_address;
 	wxStaticText* m_staticText101;
 	wxTextCtrl* m_textCtrl_port;
+	wxStaticText* m_staticText102;
+	wxTextCtrl* m_textCtrl_login;
+	wxStaticText* m_staticText1011;
+	wxTextCtrl* m_textCtrl_password;
 	wxButton* m_button_con;
 
 	virtual void on_button_click_con(wxCommandEvent& event);
 
 public:
 
-	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 127), long style = wxDEFAULT_DIALOG_STYLE);
+	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 206), long style = wxDEFAULT_DIALOG_STYLE);
 	~MyDialog1();
 
 	Delegate db_connected;

@@ -14,9 +14,9 @@ public:
 		driver = std::unique_ptr<sql::mysql::MySQL_Driver>(sql::mysql::get_mysql_driver_instance());
 	}
 
-	void connect(const sql::SQLString& address) {
-		//"tcp://176.114.130.215:3306"
-		con = std::unique_ptr<sql::Connection>(driver->connect(address, "root", "191412dima"));
+	void connect(const sql::SQLString& address, const sql::SQLString& login, const sql::SQLString& password) {
+
+		con = std::unique_ptr<sql::Connection>(driver->connect(address, login, password));
 
 		if (!con->isValid()) {
 			throw std::runtime_error("Ошибка при подключении к базе данных");
@@ -29,13 +29,86 @@ public:
 
 		std::vector<std::string> tables;
 
-		std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(con->createStatement());
-		std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SHOW TABLES FROM crypto"));
+		try {
+			std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(con->createStatement());
+			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SHOW TABLES FROM crypto"));
 
-		while (result->next()) {
-			tables.push_back(result->getString("Tables_in_crypto"));
+			while (result->next()) {
+				tables.push_back(result->getString("Tables_in_crypto"));
+			}
+		}
+		catch (sql::SQLException e) {
+			std::cout << e.what() << std::endl;
 		}
 		return std::move(tables);
+	}
+
+	void insert_table_data(const std::string& table, const CargoData<std::string>& cargo) {
+
+		std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(con->createStatement());
+
+		for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		
+			try {
+
+				sql::SQLString query_str = "INSERT INTO crypto." + table + " (";
+
+				for (uint32_t j = 0; j < cargo.get_cols(); j++) {
+					query_str += cargo.get_data(0, j) + ",";
+				}
+
+				query_str.replace(query_str.length() - 1, 1, ")");
+				query_str += " VALUES (";
+
+				for (uint32_t j = 0; j < cargo.get_cols(); j++) {
+					query_str += "'" + cargo.get_data(i, j) + "',";
+				}
+
+				query_str.replace(query_str.length() - 1, 1, ")");
+
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(query_str));
+			}
+			catch (sql::SQLException e) {
+				std::cout << e.what() << std::endl;
+			}
+		}
+	}
+
+	void update_table_data(const std::string& table, const CargoData<std::string>& cargo) {
+
+		std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(con->createStatement());
+
+		for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+
+			try {
+
+				sql::SQLString query_str = "INSERT INTO crypto." + table + "(";
+
+				for (uint32_t j = 0; j < cargo.get_cols(); j++) {
+					query_str += cargo.get_data(0, j) + ",";
+				}
+
+				query_str += ") VALUES (";
+
+				for (uint32_t j = 0; j < cargo.get_cols(); j++) {
+					query_str += "'" + cargo.get_data(i, j) + "',";
+				}
+
+				query_str = query_str.substr(query_str.length(), 1);
+				query_str += ")";
+				
+				std::cout << query_str << std::endl;
+
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
+					"INSERT INTO crypto." + table + " (id,coin_name,value,market_cap,dominance) \
+					VALUES ('" + cargo.get_data(i, 0) + "','" + cargo.get_data(i, 1) + "','" + cargo.get_data(i, 2) + "',\
+					'" + cargo.get_data(i, 3) + "','" + cargo.get_data(i, 4) + "')")
+					);
+			}
+			catch (sql::SQLException e) {
+				std::cout << e.what() << std::endl;
+			}
+		}
 	}
 
 	CargoData<std::string> get_table_data(const std::string& name) {
@@ -44,8 +117,6 @@ public:
 
 		if (name == "currency") {
 
-			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.currency"));
-			
 			CargoData<std::string> cargo(5);
 
 			cargo.new_line();
@@ -55,22 +126,80 @@ public:
 			cargo.push_data("Market Cap");
 			cargo.push_data("Dominance");
 
-			while(result->next()) {
+			try {
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.currency"));
 
-				cargo.new_line();
-				cargo.push_data(std::to_string(result->getInt(1)));
-				cargo.push_data(std::string(result->getString(2)));
-				cargo.push_data(std::to_string(result->getInt(3)));
-				cargo.push_data(std::to_string(result->getInt(4)));
-				cargo.push_data(std::to_string(result->getInt(5)));
+				while(result->next()) {
 
-				std::cout << "id=" << result->getInt(1) << std::endl;
-				std::cout << "coin_name=" << result->getString(2) << std::endl;
-				std::cout << "value=" << result->getInt(3) << std::endl;
-				std::cout << "market_cap=" << result->getInt(4) << std::endl;
-				std::cout << "dominance=" << result->getDouble(5) << std::endl;
+					cargo.new_line();
+					cargo.push_data(std::to_string(result->getInt(1)));
+					cargo.push_data(result->getString(2));
+					cargo.push_data(std::to_string(result->getDouble(3)));
+					cargo.push_data(std::to_string(result->getInt64(4)));
+					cargo.push_data(std::to_string(result->getDouble(5)));
+				}
 			}
+			catch (sql::SQLException e) {
+				std::cout << e.what() << std::endl;
+			}
+			return cargo;
+		}
+		else if(name == "stats") {
 
+			CargoData<std::string> cargo(6);
+
+			cargo.new_line();
+			cargo.push_data("ID");
+			cargo.push_data("Difficult");
+			cargo.push_data("Next Difficult");
+			cargo.push_data("Blockchain Size");
+			cargo.push_data("Blocks");
+			cargo.push_data("Transactions");
+
+			try {
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.stats"));
+
+				while (result->next()) {
+
+					cargo.new_line();
+					cargo.push_data(std::to_string(result->getInt(1)));
+					cargo.push_data(std::to_string(result->getInt64(2)));
+					cargo.push_data(std::to_string(result->getInt64(3)));
+					cargo.push_data(std::to_string(result->getDouble(4)));
+					cargo.push_data(std::to_string(result->getInt(5)));
+					cargo.push_data(std::to_string(result->getInt(6)));
+				}
+			}
+			catch (sql::SQLException e) {
+				std::cout << e.what() << std::endl;
+			}
+			return cargo;
+		}
+		else if (name == "mem_pool") {
+
+			CargoData<std::string> cargo(4);
+
+			cargo.new_line();
+			cargo.push_data("ID");
+			cargo.push_data("Transactions");
+			cargo.push_data("Transactions Per Sec");
+			cargo.push_data("Memory Size");
+
+			try {
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.mem_pool"));
+
+				while (result->next()) {
+
+					cargo.new_line();
+					cargo.push_data(std::to_string(result->getInt(1)));
+					cargo.push_data(std::to_string(result->getInt(2)));
+					cargo.push_data(std::to_string(result->getDouble(3)));
+					cargo.push_data(std::to_string(result->getUInt64(4)));
+				}
+			}
+			catch (sql::SQLException e) {
+				std::cout << e.what() << std::endl;
+			}
 			return cargo;
 		}
 		else {

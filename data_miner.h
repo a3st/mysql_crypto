@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 #include <curl/curl.h>
-#include <nlohmann/json.hpp>
+#include <json/json.h>
 
 inline size_t curl_write_func(char* data, size_t size, size_t nmemb, std::string* buffer) {
     size_t result = 0;
@@ -21,12 +21,11 @@ class DataMiner {
 public:
 
 	DataMiner() {
-	
 		m_curl = ::curl_easy_init();
 	}
 
-	void parse() {
-
+    std::vector<std::map<std::string, std::string>> parse() {
+        
 		::curl_easy_setopt(m_curl, CURLOPT_URL, "https://api.blockchair.com/stats");
         ::curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1);
         ::curl_easy_setopt(m_curl, CURLOPT_SSL_VERIFYHOST, 0);
@@ -40,33 +39,64 @@ public:
 
         ::curl_easy_cleanup(m_curl);
 
+        std::vector<std::map<std::string, std::string>> parse_data;
+
         if (result == CURLE_OK) {
 
-            nlohmann::json json_reader = nlohmann::json::parse(buffer);
+            Json::Value root;
+            Json::CharReaderBuilder reader_builder;
+            std::string errs;
 
-            auto data_coin_name = json_reader["data"];
+            const std::unique_ptr<Json::CharReader> reader(reader_builder.newCharReader());
+            if (!reader->parse(buffer.c_str(), buffer.c_str() + buffer.size(), &root, &errs)) {
+                throw std::runtime_error("Ошибка при чтение JSON");
+            }
 
-            for (auto it_coin_name = data_coin_name.begin(); it_coin_name != data_coin_name.end(); ++it_coin_name) {
+            auto data = root["data"];
 
-                std::cout << "coin_name: " << it_coin_name.key() << std::endl;
+            for (auto it_1 = data.begin(); it_1 != data.end(); ++it_1) {
 
-                auto data_coin_data = it_coin_name.value();
+                if (!data[it_1.name()]["data"].empty()) {
 
-                for (auto it_coin_data = data_coin_data.begin(); it_coin_data != data_coin_data.end(); ++it_coin_data) {
+                    parse_data.push_back(std::map<std::string, std::string>());
+                    parse_data.back()["coin_name"] = it_1.key().asString();
+                    parse_data.back()["difficulty"] = "0";
+                    parse_data.back()["next_difficulty_estimate"] = "0";
+                    parse_data.back()["blockchain_size"] = "0";
+                    parse_data.back()["blocks"] = "0";
+                    parse_data.back()["transactions"] = "0";
+                    parse_data.back()["market_price_usd"] = "0";
+                    parse_data.back()["market_cap_usd"] = "0";
+                    parse_data.back()["market_dominance_percentage"] = "0";
+                    parse_data.back()["mempool_transactions"] = "0";
+                    parse_data.back()["mempool_tps"] = "0";
+                    parse_data.back()["mempool_size"] = "0";
 
-                    std::cout << "________________________________________" << std::endl;
-                    auto data_coin_stat = it_coin_data.value();
-
-                    for (auto it_coin_stat = data_coin_stat.begin(); it_coin_stat != data_coin_stat.end(); ++it_coin_stat) {
-                        std::cout << it_coin_stat.key() << ": " << it_coin_stat.value() << std::endl;
-                    }
-                    std::cout << "________________________________________" << std::endl;
+                    std::cout << "coin_name: " << it_1.key() << std::endl;
+                } else {
+                    continue;
                 }
+
+                auto data_2 = data[it_1.name()]["data"];
+
+                for (auto it_2 = data_2.begin(); it_2 != data_2.end(); ++it_2) {
+
+                    if (data_2[it_2.name()].isString() || data_2[it_2.name()].isIntegral() || data_2[it_2.name()].isNumeric() ||
+                        data_2[it_2.name()].isDouble()) {
+
+                        parse_data.back()[it_2.name()] = data_2[it_2.name()].asString();
+
+                        std::cout << it_2.key() << " " << data_2[it_2.name()].asString() << std::endl;
+                    }
+                }
+                std::cout << "_______________________" << std::endl;
             }
 
         } else {
-            std::cout << "Not Ok" << std::endl;
+
+            throw std::runtime_error("Blockchair.api не доступен в данный момент");
         }
+        return parse_data;
 	}
 
 private:

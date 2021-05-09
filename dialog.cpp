@@ -15,8 +15,12 @@ void MyDialog1::on_button_click_con(wxCommandEvent& event)
 	std::string fmt = std::string(m_textCtrl_address->GetValue().c_str().AsChar()) + ':' + std::string(m_textCtrl_port->GetValue().c_str().AsChar());
 	sql::SQLString sql_addr = fmt;
 
+	sql::SQLString login = m_textCtrl_login->GetValue().c_str().AsChar();
+	sql::SQLString password = m_textCtrl_password->GetValue().c_str().AsChar();
+
 	try {
-		g_database_handler->connect(sql_addr);
+
+		g_database_handler->connect(sql_addr, login, password);
 
 		this->EndModal(1);
 		::wxMessageBox("Соединение установлено с БД", "Информация");
@@ -57,6 +61,26 @@ MyDialog1::MyDialog1(wxWindow* parent, wxWindowID id, const wxString& title, con
 
 
 	bSizer9->Add(bSizer10, 1, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer101;
+	bSizer101 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_staticText102 = new wxStaticText(this, wxID_ANY, wxT("Login:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText102->Wrap(-1);
+	bSizer101->Add(m_staticText102, 0, wxALL, 5);
+
+	m_textCtrl_login = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80, -1), 0);
+	bSizer101->Add(m_textCtrl_login, 0, wxALL, 5);
+
+	m_staticText1011 = new wxStaticText(this, wxID_ANY, wxT("Password:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText1011->Wrap(-1);
+	bSizer101->Add(m_staticText1011, 0, wxALL, 5);
+
+	m_textCtrl_password = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(80, -1), wxTE_PASSWORD);
+	bSizer101->Add(m_textCtrl_password, 0, wxALL, 5);
+
+
+	bSizer9->Add(bSizer101, 1, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer11;
 	bSizer11 = new wxBoxSizer(wxHORIZONTAL);

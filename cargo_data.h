@@ -3,10 +3,20 @@
 #pragma once
 
 #include <tuple>
+#include <sstream>
 
 template<typename T>
 class CargoData {
 public:
+
+	CargoData() {
+	}
+
+	void resize(const size_t cols) {
+		m_data.clear();
+		m_col_size = cols;
+		m_cur = 0;
+	}
 
 	CargoData(const size_t col_size) : m_col_size(col_size) {
 	}
