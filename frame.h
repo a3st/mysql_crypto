@@ -73,10 +73,12 @@ protected:
 	wxStaticText* m_staticText2112;
 	wxTextCtrl* m_textCtrl_max_mem;
 
+	virtual void on_close(wxCloseEvent& event);
 	virtual void on_menu_sel_open_db(wxCommandEvent& event);
 	virtual void on_menu_sel_save_db(wxCommandEvent& event);
 	virtual void on_menu_sel_update_db(wxCommandEvent& event);
 	virtual void on_menu_sel_parse(wxCommandEvent& event);
+	virtual void on_menu_sel_test_func(wxCommandEvent& event);
 	virtual void on_menu_sel_help(wxCommandEvent& event);
 	virtual void on_combobox_sel(wxCommandEvent& event);
 	virtual void on_button_click_apply_filters(wxCommandEvent& event);

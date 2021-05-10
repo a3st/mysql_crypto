@@ -24,6 +24,10 @@ public:
 		m_curl = ::curl_easy_init();
 	}
 
+    ~DataMiner() {
+        ::curl_easy_cleanup(m_curl);
+    }
+
     std::vector<std::map<std::string, std::string>> parse() {
         
 		::curl_easy_setopt(m_curl, CURLOPT_URL, "https://api.blockchair.com/stats");
@@ -36,8 +40,6 @@ public:
         ::curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_func);
 
         CURLcode result = ::curl_easy_perform(m_curl);
-
-        ::curl_easy_cleanup(m_curl);
 
         std::vector<std::map<std::string, std::string>> parse_data;
 
@@ -72,7 +74,7 @@ public:
                     parse_data.back()["mempool_tps"] = "0";
                     parse_data.back()["mempool_size"] = "0";
 
-                    std::cout << "coin_name: " << it_1.key() << std::endl;
+                    //std::cout << "coin_name: " << it_1.key() << std::endl;
                 } else {
                     continue;
                 }
@@ -86,10 +88,10 @@ public:
 
                         parse_data.back()[it_2.name()] = data_2[it_2.name()].asString();
 
-                        std::cout << it_2.key() << " " << data_2[it_2.name()].asString() << std::endl;
+                        //std::cout << it_2.key() << " " << data_2[it_2.name()].asString() << std::endl;
                     }
                 }
-                std::cout << "_______________________" << std::endl;
+                //std::cout << "_______________________" << std::endl;
             }
 
         } else {

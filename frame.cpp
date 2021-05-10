@@ -10,8 +10,8 @@
 
 ///////////////////////////////////////////////////////////////////////////
 
-void MyFrame1::on_db_connected()
-{
+void MyFrame1::on_db_connected() {
+
 	auto tables = g_database_handler->get_tables();
 	
 	std::vector<wxString> tables_;
@@ -29,8 +29,8 @@ void MyFrame1::on_db_connected()
 	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
 }
 
-void MyFrame1::set_table_values_by_cargo(wxGrid* grid, const CargoData<std::string>& cargo)
-{
+void MyFrame1::set_table_values_by_cargo(wxGrid* grid, const CargoData<std::string>& cargo) {
+
 	if (grid->GetNumberRows() > 0) {
 		grid->DeleteRows(0, grid->GetNumberRows());
 	}
@@ -52,6 +52,11 @@ void MyFrame1::set_table_values_by_cargo(wxGrid* grid, const CargoData<std::stri
 	}
 }
 
+void MyFrame1::on_close(wxCloseEvent& event) {
+
+	wxGetApp().Exit();
+}
+
 void MyFrame1::on_menu_sel_open_db(wxCommandEvent& event) {
 	
 	m_open_dial->ShowModal();
@@ -59,18 +64,31 @@ void MyFrame1::on_menu_sel_open_db(wxCommandEvent& event) {
 
 void MyFrame1::on_menu_sel_save_db(wxCommandEvent& event) {
 	
+	try {
 
+		g_database_handler->update_table_data("currency", m_caches_cargos["currency"]);
+		g_database_handler->update_table_data("mem_pool", m_caches_cargos["mem_pool"]);
+		g_database_handler->update_table_data("stats", m_caches_cargos["stats"]);
+	}
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Ошибка");
+	}
 }
 
 void MyFrame1::on_menu_sel_update_db(wxCommandEvent& event) {
 
 	m_comboBox_table->SetValue("currency");
 
-	m_caches_cargos["currency"] = g_database_handler->get_table_data("currency");
-	m_caches_cargos["mem_pool"] = g_database_handler->get_table_data("mem_pool");
-	m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
+	try {
+		m_caches_cargos["currency"] = g_database_handler->get_table_data("currency");
+		m_caches_cargos["mem_pool"] = g_database_handler->get_table_data("mem_pool");
+		m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
 
-	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
+		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
+	}
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Ошибка");
+	}
 }
 
 void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
@@ -140,9 +158,26 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 		coin_idx++;
 	}
 
-	g_database_handler->insert_table_data("currency", currency_data);
-	g_database_handler->insert_table_data("stats", stats_data);
-	g_database_handler->insert_table_data("mem_pool", mem_pool_data);
+	try {
+		g_database_handler->insert_table_data("stats", stats_data);
+		g_database_handler->insert_table_data("mem_pool", mem_pool_data);
+		g_database_handler->insert_table_data("currency", currency_data);
+	}
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Ошибка");
+	}
+}
+
+void MyFrame1::on_menu_sel_test_func(wxCommandEvent& event) {
+
+	try {
+
+		auto args = g_database_handler->call_test_func();
+		::wxMessageBox("coin_name: " + std::get<0>(args) + "\ncoin_value: " + std::to_string(std::get<1>(args)), "call test_func");
+	}
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Ошибка");
+	}
 }
 
 void MyFrame1::on_menu_sel_help(wxCommandEvent& event) {
@@ -158,18 +193,50 @@ void MyFrame1::on_menu_sel_help(wxCommandEvent& event) {
 	);
 }
 
-void MyFrame1::on_combobox_sel(wxCommandEvent& event)
-{
+void MyFrame1::on_combobox_sel(wxCommandEvent& event) {
+
 	std::string cur = m_comboBox_table->GetValue().c_str().AsChar();
 	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
 }
 
-void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event)
-{
+void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
+
+	try {
+
+		float_t min_val = std::stof(m_textCtrl_min_val->GetValue().c_str().AsChar());
+		float_t max_val = std::stof(m_textCtrl_max_val->GetValue().c_str().AsChar());
+
+		int64_t min_blocks = std::stoll(m_textCtrl_min_blocks->GetValue().c_str().AsChar());
+		int64_t max_blocks = std::stoll(m_textCtrl_max_blocks->GetValue().c_str().AsChar());
+
+		int64_t min_mem = std::stoll(m_textCtrl_min_mem->GetValue().c_str().AsChar());
+		int64_t max_mem = std::stoll(m_textCtrl_max_mem->GetValue().c_str().AsChar());
+
+		try {
+			m_caches_cargos["filter"] = g_database_handler->get_filter_data(min_val, max_val, min_blocks, max_blocks, min_mem, max_mem);
+			this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["filter"]);
+		}
+		catch (std::exception& e) {
+			::wxMessageBox(e.what(), "Ошибка");
+		}
+	}
+	catch(std::exception&) {
+		::wxMessageBox("Недопустимые значения в фильтре", "Ошибка");
+	}
 }
 
-void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event)
-{
+void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
+
+	std::string cur = m_comboBox_table->GetValue().c_str().AsChar();
+	if (!m_caches_cargos.empty()) {
+		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
+	}
+	m_textCtrl_min_val->SetValue("0");
+	m_textCtrl_max_val->SetValue("0");
+	m_textCtrl_min_blocks->SetValue("0");
+	m_textCtrl_max_blocks->SetValue("0");
+	m_textCtrl_min_mem->SetValue("0");
+	m_textCtrl_max_mem->SetValue("0");
 }
 
 MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(nullptr, wxID_ANY, title, pos, size, style) {
@@ -197,6 +264,10 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxMenuItem* m_menuItem_parse;
 	m_menuItem_parse = new wxMenuItem(m_menu31, wxID_ANY, wxString(wxT("Parse from Blockchair")), wxEmptyString, wxITEM_NORMAL);
 	m_menu31->Append(m_menuItem_parse);
+
+	wxMenuItem* m_menuItem_test_func;
+	m_menuItem_test_func = new wxMenuItem(m_menu31, wxID_ANY, wxString(wxT("Test Functions")), wxEmptyString, wxITEM_NORMAL);
+	m_menu31->Append(m_menuItem_test_func);
 
 	m_menubar4->Append(m_menu31, wxT("Tools"));
 
@@ -345,10 +416,12 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 
 	this->Centre(wxBOTH);
 
+	this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(MyFrame1::on_close));
 	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_open_db), this, m_menuItem_open_db->GetId());
 	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_save_db), this, m_menuItem_save_db->GetId());
 	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_update_db), this, m_menuItem_update_db->GetId());
 	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_parse), this, m_menuItem_parse->GetId());
+	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_test_func), this, m_menuItem_test_func->GetId());
 	m_menu3->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_help), this, m_menuItem_help->GetId());
 	m_comboBox_table->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
@@ -357,10 +430,19 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_open_dial = new MyDialog1(nullptr, wxID_ANY, "Open DB");
 	m_open_dial->db_connected.bind(this, &MyFrame1::on_db_connected);
 
+	m_textCtrl_min_val->SetValue("0");
+	m_textCtrl_max_val->SetValue("0");
+	m_textCtrl_min_blocks->SetValue("0");
+	m_textCtrl_max_blocks->SetValue("0");
+	m_textCtrl_min_mem->SetValue("0");
+	m_textCtrl_max_mem->SetValue("0");
+
 	std::cout << "DEBUG: Frame1 created!" << std::endl;
 }
 
 MyFrame1::~MyFrame1() {
+
+	this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(MyFrame1::on_close));
 	m_comboBox_table->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
