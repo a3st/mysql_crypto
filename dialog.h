@@ -36,25 +36,27 @@ class MyDialog1 : public wxDialog
 {
 private:
 
+	void set_status(const bool connected);
+
 protected:
 
 	wxStaticText* m_staticText10;
-	wxTextCtrl* m_textCtrl_address;
+	wxTextCtrl* m_textbox_address;
 	wxStaticText* m_staticText101;
-	wxTextCtrl* m_textCtrl_port;
+	wxTextCtrl* m_textbox_port;
 	wxStaticText* m_staticText102;
-	wxTextCtrl* m_textCtrl_login;
+	wxTextCtrl* m_textbox_login;
 	wxStaticText* m_staticText1011;
-	wxTextCtrl* m_textCtrl_password;
+	wxTextCtrl* m_textbox_password;
 	wxButton* m_button_con;
+	wxStaticText* m_statictext_status;
 
 	virtual void on_button_click_con(wxCommandEvent& event);
 
 public:
 
-	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 206), long style = wxDEFAULT_DIALOG_STYLE);
+	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 150), long style = wxDEFAULT_DIALOG_STYLE);
 	~MyDialog1();
 
 	Delegate db_connected;
-
 };

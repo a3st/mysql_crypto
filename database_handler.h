@@ -59,8 +59,17 @@ public:
 		for (uint32_t i = 1; i < cargo.get_rows(); i++) {
 
 			try {
-				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
-					"SELECT * FROM crypto." + table + " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'"));
+
+				std::unique_ptr<sql::ResultSet> result;
+
+				if (table == "daily") {
+					result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
+						"SELECT * FROM crypto." + table + " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'" +
+						" && crypto." + table + ".date='" + cargo.get_data(i, 1) + "'"));
+				} else {
+					result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
+						"SELECT * FROM crypto." + table + " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'"));
+				}
 
 				if (result->rowsCount() > 0) {
 
@@ -116,7 +125,12 @@ public:
 				}
 
 				query_str.replace(query_str.length() - 1, 1, "");
-				query_str += " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'";
+
+				if (table == "daily") {
+					query_str += " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'" + " && crypto." + table + ".date='" + cargo.get_data(i, 1) + "'";
+				} else {
+					query_str += " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'";
+				}
 				
 				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(query_str));
 			}
@@ -126,10 +140,7 @@ public:
 		}
 	}
 
-	CargoData<std::string> get_filter_data(
-		const float_t min_value, const float_t max_value, 
-		const int64_t min_blocks, const int64_t max_blocks,
-		const int64_t min_mem, const int64_t max_mem) {
+	CargoData<std::string> get_filter_data(const CargoData<std::string>& filter_cargo) {
 
 		if (!m_connected) {
 			throw std::runtime_error("Вы не подключены к базе данных");
@@ -142,7 +153,7 @@ public:
 		cargo.new_line();
 		cargo.push_data("id");
 		cargo.push_data("coin_name");
-		cargo.push_data("value");
+		cargo.push_data("market_value");
 		cargo.push_data("market_cap");
 		cargo.push_data("dominance");
 
@@ -150,22 +161,20 @@ public:
 
 			sql::SQLString query_str = "SELECT crypto.currency.* FROM crypto.currency \
 				INNER JOIN crypto.mem_pool ON crypto.currency.id = crypto.mem_pool.id \
-				INNER JOIN crypto.stats ON crypto.currency.id = crypto.stats.id WHERE \
-				crypto.currency.value >= '" + std::to_string(min_value) + "' &&\
-				crypto.stats.blocks >= '" + std::to_string(min_blocks) + "' &&\
-				crypto.mem_pool.mem_size >= '" + std::to_string(min_mem) + "'";
+				INNER JOIN crypto.stats ON crypto.currency.id = crypto.stats.id WHERE ";
 
-			if (max_value > 0) {
-				query_str += " && crypto.currency.value <= '" + std::to_string(max_value) + "'";
+			for (uint32_t i = 0; i < filter_cargo.get_cols(); i++) {
+				query_str += "crypto." + filter_cargo.get_data(0, i) + " >= '" + filter_cargo.get_data(1, i) + "' &&";
 			}
 
-			if (max_blocks > 0) {
-				query_str += " && crypto.stats.blocks <= '" + std::to_string(max_blocks) + "'";
+			for (uint32_t i = 0; i < filter_cargo.get_cols(); i++) {
+
+				if (std::stof(filter_cargo.get_data(2, i)) > 0) {
+					query_str += "crypto." + filter_cargo.get_data(0, i) + " <= '" + filter_cargo.get_data(2, i) + "' &&";
+				}
 			}
 
-			if (max_mem > 0) {
-				query_str += " && crypto.mem_pool.mem_size <= '" + std::to_string(max_blocks) + "'";
-			}
+			query_str.replace(query_str.length() - 2, 2, "");
 
 			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(query_str));
 
@@ -185,7 +194,7 @@ public:
 		return cargo;
 	}
 
-	std::tuple<std::string, float_t> call_test_func() {
+	/* std::tuple<std::string, float_t> call_test_func() {
 
 		if (!m_connected) {
 			throw std::runtime_error("Вы не подключены к базе данных");
@@ -221,7 +230,7 @@ public:
 		}
 
 		return { coin_name, coin_value };
-	}
+	}*/
 
 	CargoData<std::string> get_table_data(const std::string& name) {
 
@@ -238,7 +247,7 @@ public:
 			cargo.new_line();
 			cargo.push_data("id");
 			cargo.push_data("coin_name");
-			cargo.push_data("value");
+			cargo.push_data("market_value");
 			cargo.push_data("market_cap");
 			cargo.push_data("dominance");
 
@@ -262,7 +271,7 @@ public:
 		}
 		else if(name == "stats") {
 
-			CargoData<std::string> cargo(6);
+			CargoData<std::string> cargo(7);
 
 			cargo.new_line();
 			cargo.push_data("id");
@@ -271,6 +280,7 @@ public:
 			cargo.push_data("blockchain_size");
 			cargo.push_data("blocks");
 			cargo.push_data("transactions");
+			cargo.push_data("outputs");
 
 			try {
 				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.stats"));
@@ -279,11 +289,12 @@ public:
 
 					cargo.new_line();
 					cargo.push_data(std::to_string(result->getInt(1)));
-					cargo.push_data(std::to_string(result->getInt64(2)));
-					cargo.push_data(std::to_string(result->getInt64(3)));
+					cargo.push_data(std::to_string(result->getUInt64(2)));
+					cargo.push_data(std::to_string(result->getUInt64(3)));
 					cargo.push_data(std::to_string(result->getDouble(4)));
 					cargo.push_data(std::to_string(result->getInt(5)));
-					cargo.push_data(std::to_string(result->getInt(6)));
+					cargo.push_data(std::to_string(result->getUInt64(6)));
+					cargo.push_data(std::to_string(result->getUInt64(7)));
 				}
 			}
 			catch (sql::SQLException& e) {
@@ -298,7 +309,7 @@ public:
 			cargo.new_line();
 			cargo.push_data("id");
 			cargo.push_data("transactions");
-			cargo.push_data("transactions_time_s");
+			cargo.push_data("tps");
 			cargo.push_data("mem_size");
 
 			try {
@@ -308,9 +319,40 @@ public:
 
 					cargo.new_line();
 					cargo.push_data(std::to_string(result->getInt(1)));
-					cargo.push_data(std::to_string(result->getInt(2)));
+					cargo.push_data(std::to_string(result->getUInt64(2)));
 					cargo.push_data(std::to_string(result->getDouble(3)));
 					cargo.push_data(std::to_string(result->getUInt64(4)));
+				}
+			}
+			catch (sql::SQLException& e) {
+				std::cout << e.what() << std::endl;
+			}
+			return cargo;
+		}
+		else if (name == "daily") {
+
+			CargoData<std::string> cargo(6);
+
+			cargo.new_line();
+			cargo.push_data("id");
+			cargo.push_data("date");
+			cargo.push_data("market_value");
+			cargo.push_data("dominance");
+			cargo.push_data("transactions");
+			cargo.push_data("outputs");
+
+			try {
+				std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.daily"));
+
+				while (result->next()) {
+
+					cargo.new_line();
+					cargo.push_data(std::to_string(result->getInt(1)));
+					cargo.push_data(result->getString(2));
+					cargo.push_data(std::to_string(result->getDouble(3)));
+					cargo.push_data(std::to_string(result->getDouble(4)));
+					cargo.push_data(std::to_string(result->getUInt64(5)));
+					cargo.push_data(std::to_string(result->getUInt64(6)));
 				}
 			}
 			catch (sql::SQLException& e) {

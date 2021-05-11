@@ -8,13 +8,13 @@ std::unique_ptr<DataMiner> g_data_miner;
 
 bool MyApp::OnInit()
 {
-    /*FILE* fDummy;
+    FILE* fDummy;
     ::AllocConsole();
 
     ::freopen_s(&fDummy, "CONIN$", "r", stdin);
     ::freopen_s(&fDummy, "CONOUT$", "w", stderr);
     ::freopen_s(&fDummy, "CONOUT$", "w", stdout);
-    */
+    
 
     if (!wxApp::OnInit()) {
         return false;
@@ -22,7 +22,7 @@ bool MyApp::OnInit()
 
     MyFrame1* frame = new MyFrame1(wxT("CryptoAnalytics")
 #ifndef __WXWINCE__
-        , wxPoint(50, 50), wxSize(450, 340)
+        , wxPoint(50, 50), wxSize(971, 550)
 #endif
     );
 

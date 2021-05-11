@@ -14,17 +14,18 @@ void MyFrame1::on_db_connected() {
 
 	auto tables = g_database_handler->get_tables();
 	
-	std::vector<wxString> tables_;
+	std::vector<wxString> tables_conv;
 	for (uint32_t i = 0; i < tables.size(); i++) {
-		tables_.push_back(tables[i].c_str());
+		tables_conv.push_back(tables[i].c_str());
 	}
 
-	m_comboBox_table->Set(tables_);
-	m_comboBox_table->SetValue("currency");
+	m_combobox_table->Set(tables_conv);
+	m_combobox_table->SetValue("currency");
 
 	m_caches_cargos["currency"] = g_database_handler->get_table_data("currency");
 	m_caches_cargos["mem_pool"] = g_database_handler->get_table_data("mem_pool");
 	m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
+	m_caches_cargos["daily"] = g_database_handler->get_table_data("daily");
 
 	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
 }
@@ -59,7 +60,7 @@ void MyFrame1::on_close(wxCloseEvent& event) {
 
 void MyFrame1::on_menu_sel_open_db(wxCommandEvent& event) {
 	
-	m_open_dial->ShowModal();
+	m_open_db_dialog->ShowModal();
 }
 
 void MyFrame1::on_menu_sel_save_db(wxCommandEvent& event) {
@@ -69,6 +70,7 @@ void MyFrame1::on_menu_sel_save_db(wxCommandEvent& event) {
 		g_database_handler->update_table_data("currency", m_caches_cargos["currency"]);
 		g_database_handler->update_table_data("mem_pool", m_caches_cargos["mem_pool"]);
 		g_database_handler->update_table_data("stats", m_caches_cargos["stats"]);
+		g_database_handler->update_table_data("daily", m_caches_cargos["daily"]);
 	}
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Ошибка");
@@ -77,12 +79,13 @@ void MyFrame1::on_menu_sel_save_db(wxCommandEvent& event) {
 
 void MyFrame1::on_menu_sel_update_db(wxCommandEvent& event) {
 
-	m_comboBox_table->SetValue("currency");
+	m_combobox_table->SetValue("currency");
 
 	try {
 		m_caches_cargos["currency"] = g_database_handler->get_table_data("currency");
 		m_caches_cargos["mem_pool"] = g_database_handler->get_table_data("mem_pool");
 		m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
+		m_caches_cargos["daily"] = g_database_handler->get_table_data("daily");
 
 		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
 	}
@@ -99,7 +102,7 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 	currency_data.new_line();
 	currency_data.push_data("id");
 	currency_data.push_data("coin_name");
-	currency_data.push_data("value");
+	currency_data.push_data("market_value");
 	currency_data.push_data("market_cap");
 	currency_data.push_data("dominance");
 
@@ -118,7 +121,7 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 
 	coin_idx = 0;
 
-	CargoData<std::string> stats_data(6);
+	CargoData<std::string> stats_data(7);
 	stats_data.new_line();
 	stats_data.push_data("id");
 	stats_data.push_data("difficult");
@@ -126,6 +129,7 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 	stats_data.push_data("blockchain_size");
 	stats_data.push_data("blocks");
 	stats_data.push_data("transactions");
+	stats_data.push_data("outputs");
 
 	for (uint32_t i = 0; i < values.size(); i++) {
 
@@ -136,6 +140,7 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 		stats_data.push_data(values[i]["blockchain_size"]);
 		stats_data.push_data(values[i]["blocks"]);
 		stats_data.push_data(values[i]["transactions"]);
+		stats_data.push_data(values[i]["outputs"]);
 		coin_idx++;
 	}
 
@@ -145,7 +150,7 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 	mem_pool_data.new_line();
 	mem_pool_data.push_data("id");
 	mem_pool_data.push_data("transactions");
-	mem_pool_data.push_data("transactions_time_s");
+	mem_pool_data.push_data("tps");
 	mem_pool_data.push_data("mem_size");
 
 	for (uint32_t i = 0; i < values.size(); i++) {
@@ -158,22 +163,42 @@ void MyFrame1::on_menu_sel_parse(wxCommandEvent& event) {
 		coin_idx++;
 	}
 
+	coin_idx = 0;
+
+	CargoData<std::string> daily_data(6);
+	daily_data.new_line();
+	daily_data.push_data("id");
+	daily_data.push_data("date");
+	daily_data.push_data("market_value");
+	daily_data.push_data("dominance");
+	daily_data.push_data("transactions");
+	daily_data.push_data("outputs");
+
+	time_t raw_time;
+	struct tm* time_info;
+	char buffer[80];
+
+	::time(&raw_time);
+	time_info = ::localtime(&raw_time);
+	::strftime(buffer, 80, "%Y-%m-%d", time_info);
+
+	for (uint32_t i = 0; i < values.size(); i++) {
+
+		daily_data.new_line();
+		daily_data.push_data(std::to_string(coin_idx));
+		daily_data.push_data(buffer);
+		daily_data.push_data(values[i]["market_price_usd"]);
+		daily_data.push_data(values[i]["market_dominance_percentage"]);
+		daily_data.push_data(values[i]["transactions"]);
+		daily_data.push_data(values[i]["outputs"]);
+		coin_idx++;
+	}
+
 	try {
 		g_database_handler->insert_table_data("stats", stats_data);
 		g_database_handler->insert_table_data("mem_pool", mem_pool_data);
+		g_database_handler->insert_table_data("daily", daily_data);
 		g_database_handler->insert_table_data("currency", currency_data);
-	}
-	catch (std::exception& e) {
-		::wxMessageBox(e.what(), "Ошибка");
-	}
-}
-
-void MyFrame1::on_menu_sel_test_func(wxCommandEvent& event) {
-
-	try {
-
-		auto args = g_database_handler->call_test_func();
-		::wxMessageBox("coin_name: " + std::get<0>(args) + "\ncoin_value: " + std::to_string(std::get<1>(args)), "call test_func");
 	}
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Ошибка");
@@ -195,86 +220,100 @@ void MyFrame1::on_menu_sel_help(wxCommandEvent& event) {
 
 void MyFrame1::on_combobox_sel(wxCommandEvent& event) {
 
-	std::string cur = m_comboBox_table->GetValue().c_str().AsChar();
+	std::string cur = m_combobox_table->GetValue().c_str().AsChar();
 	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
 }
 
 void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
 
+	CargoData<std::string> cargo(6);
+	cargo.new_line();
+	cargo.push_data("currency.market_value");
+	cargo.push_data("currency.dominance");
+	cargo.push_data("stats.blocks");
+	cargo.push_data("stats.transactions");
+	cargo.push_data("mem_pool.transactions");
+	cargo.push_data("mem_pool.tps");
+
+	cargo.new_line();
+	cargo.push_data(m_textbox_min_market_val->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_min_dominance->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_min_blocks->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_min_transactions->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_min_mem_transactions->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_min_mem_tps->GetValue().c_str().AsChar());
+
+	cargo.new_line();
+	cargo.push_data(m_textbox_max_market_val->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_max_dominance->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_max_blocks->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_max_transactions->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_max_mem_transactions->GetValue().c_str().AsChar());
+	cargo.push_data(m_textbox_max_mem_tps->GetValue().c_str().AsChar());
+
 	try {
-
-		float_t min_val = std::stof(m_textCtrl_min_val->GetValue().c_str().AsChar());
-		float_t max_val = std::stof(m_textCtrl_max_val->GetValue().c_str().AsChar());
-
-		int64_t min_blocks = std::stoll(m_textCtrl_min_blocks->GetValue().c_str().AsChar());
-		int64_t max_blocks = std::stoll(m_textCtrl_max_blocks->GetValue().c_str().AsChar());
-
-		int64_t min_mem = std::stoll(m_textCtrl_min_mem->GetValue().c_str().AsChar());
-		int64_t max_mem = std::stoll(m_textCtrl_max_mem->GetValue().c_str().AsChar());
-
-		try {
-			m_caches_cargos["filter"] = g_database_handler->get_filter_data(min_val, max_val, min_blocks, max_blocks, min_mem, max_mem);
-			this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["filter"]);
-		}
-		catch (std::exception& e) {
-			::wxMessageBox(e.what(), "Ошибка");
-		}
+		m_caches_cargos["filter"] = g_database_handler->get_filter_data(cargo);
+		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["filter"]);
 	}
-	catch(std::exception&) {
-		::wxMessageBox("Недопустимые значения в фильтре", "Ошибка");
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Ошибка");
 	}
+
 }
 
 void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
 
-	std::string cur = m_comboBox_table->GetValue().c_str().AsChar();
+	std::string cur = m_combobox_table->GetValue().c_str().AsChar();
 	if (!m_caches_cargos.empty()) {
 		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
 	}
-	m_textCtrl_min_val->SetValue("0");
-	m_textCtrl_max_val->SetValue("0");
-	m_textCtrl_min_blocks->SetValue("0");
-	m_textCtrl_max_blocks->SetValue("0");
-	m_textCtrl_min_mem->SetValue("0");
-	m_textCtrl_max_mem->SetValue("0");
+
+	m_textbox_min_market_val->SetValue("0");
+	m_textbox_min_dominance->SetValue("0");
+	m_textbox_min_transactions->SetValue("0");
+	m_textbox_min_blocks->SetValue("0");
+	m_textbox_min_mem_transactions->SetValue("0");
+	m_textbox_min_mem_tps->SetValue("0");
+	m_textbox_max_market_val->SetValue("0");
+	m_textbox_max_dominance->SetValue("0");
+	m_textbox_max_transactions->SetValue("0");
+	m_textbox_max_blocks->SetValue("0");
+	m_textbox_max_mem_transactions->SetValue("0");
+	m_textbox_max_mem_tps->SetValue("0");
 }
 
 MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(nullptr, wxID_ANY, title, pos, size, style) {
 	
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
-	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
+	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
 	m_menubar4 = new wxMenuBar(0);
 	m_menu2 = new wxMenu();
-	wxMenuItem* m_menuItem_open_db;
-	m_menuItem_open_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Open DB")), wxEmptyString, wxITEM_NORMAL);
-	m_menu2->Append(m_menuItem_open_db);
+	wxMenuItem* m_menuitem_open_db;
+	m_menuitem_open_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Open")), wxEmptyString, wxITEM_NORMAL);
+	m_menu2->Append(m_menuitem_open_db);
 
-	wxMenuItem* m_menuItem_save_db;
-	m_menuItem_save_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Save DB")), wxEmptyString, wxITEM_NORMAL);
-	m_menu2->Append(m_menuItem_save_db);
+	wxMenuItem* m_menuitem_save_db;
+	m_menuitem_save_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Save")), wxEmptyString, wxITEM_NORMAL);
+	m_menu2->Append(m_menuitem_save_db);
 
-	wxMenuItem* m_menuItem_update_db;
-	m_menuItem_update_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Update DB")), wxEmptyString, wxITEM_NORMAL);
-	m_menu2->Append(m_menuItem_update_db);
+	wxMenuItem* m_menuitem_update_db;
+	m_menuitem_update_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Update")), wxEmptyString, wxITEM_NORMAL);
+	m_menu2->Append(m_menuitem_update_db);
 
-	m_menubar4->Append(m_menu2, wxT("SQL"));
+	m_menubar4->Append(m_menu2, wxT("Database"));
 
 	m_menu31 = new wxMenu();
-	wxMenuItem* m_menuItem_parse;
-	m_menuItem_parse = new wxMenuItem(m_menu31, wxID_ANY, wxString(wxT("Parse from Blockchair")), wxEmptyString, wxITEM_NORMAL);
-	m_menu31->Append(m_menuItem_parse);
-
-	wxMenuItem* m_menuItem_test_func;
-	m_menuItem_test_func = new wxMenuItem(m_menu31, wxID_ANY, wxString(wxT("Test Functions")), wxEmptyString, wxITEM_NORMAL);
-	m_menu31->Append(m_menuItem_test_func);
+	wxMenuItem* m_menuitem_parse;
+	m_menuitem_parse = new wxMenuItem(m_menu31, wxID_ANY, wxString(wxT("Parse from Blockchair.API")), wxEmptyString, wxITEM_NORMAL);
+	m_menu31->Append(m_menuitem_parse);
 
 	m_menubar4->Append(m_menu31, wxT("Tools"));
 
 	m_menu3 = new wxMenu();
-	wxMenuItem* m_menuItem_help;
-	m_menuItem_help = new wxMenuItem(m_menu3, wxID_ANY, wxString(wxT("About")), wxEmptyString, wxITEM_NORMAL);
-	m_menu3->Append(m_menuItem_help);
+	wxMenuItem* m_menuitem_help;
+	m_menuitem_help = new wxMenuItem(m_menu3, wxID_ANY, wxString(wxT("About")), wxEmptyString, wxITEM_NORMAL);
+	m_menu3->Append(m_menuitem_help);
 
 	m_menubar4->Append(m_menu3, wxT("Help"));
 
@@ -282,7 +321,6 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 
 	wxBoxSizer* bSizer1;
 	bSizer1 = new wxBoxSizer(wxVERTICAL);
-
 
 	bSizer1->Add(0, 5, 0, wxEXPAND, 5);
 
@@ -295,6 +333,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_grid_table->CreateGrid(5, 10);
 	m_grid_table->EnableEditing(true);
 	m_grid_table->EnableGridLines(true);
+	m_grid_table->SetGridLineColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVEBORDER));
 	m_grid_table->EnableDragGridSize(false);
 	m_grid_table->SetMargins(0, 0);
 
@@ -311,105 +350,239 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_grid_table->SetRowLabelAlignment(wxALIGN_CENTER, wxALIGN_CENTER);
 
 	// Label Appearance
+	m_grid_table->SetLabelBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION));
+	m_grid_table->SetLabelFont(wxFont(8, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+	m_grid_table->SetLabelTextColour(wxSystemSettings::GetColour(wxSYS_COLOUR_CAPTIONTEXT));
 
 	// Cell Defaults
 	m_grid_table->SetDefaultCellAlignment(wxALIGN_LEFT, wxALIGN_TOP);
-	bSizer8->Add(m_grid_table, 0, wxALL, 5);
+	m_grid_table->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVEBORDER));
 
+	bSizer8->Add(m_grid_table, 0, wxALL | wxEXPAND, 5);
 
-	bSizer1->Add(bSizer8, 1, wxEXPAND, 5);
+	bSizer1->Add(bSizer8, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer2;
 	bSizer2 = new wxBoxSizer(wxHORIZONTAL);
 
+	wxBoxSizer* bSizer12;
+	bSizer12 = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* bSizer38;
+	bSizer38 = new wxBoxSizer(wxHORIZONTAL);
+
 	m_staticText1 = new wxStaticText(this, wxID_ANY, wxT("Current table"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText1->Wrap(-1);
-	bSizer2->Add(m_staticText1, 0, wxALL, 5);
+	bSizer38->Add(m_staticText1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	m_comboBox_table = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-	bSizer2->Add(m_comboBox_table, 0, wxALL, 5);
+	m_combobox_table = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
+	bSizer38->Add(m_combobox_table, 0, wxALL, 5);
+
+	bSizer12->Add(bSizer38, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer39;
+	bSizer39 = new wxBoxSizer(wxVERTICAL);
+
+	m_staticText11 = new wxStaticText(this, wxID_ANY, wxT("Plot"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText11->Wrap(-1);
+	bSizer39->Add(m_staticText11, 0, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	wxBoxSizer* bSizer40;
+	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_checkbox_plot_market_val = new wxCheckBox(this, wxID_ANY, wxT("Market Value ($)"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer40->Add(m_checkbox_plot_market_val, 0, wxALL, 5);
+
+	m_checkbox_plot_dominance = new wxCheckBox(this, wxID_ANY, wxT("Dominance"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer40->Add(m_checkbox_plot_dominance, 0, wxALL, 5);
+
+	m_checkbox_plot_transactions = new wxCheckBox(this, wxID_ANY, wxT("Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer40->Add(m_checkbox_plot_transactions, 0, wxALL, 5);
+
+	m_checkbox_plot_outputs = new wxCheckBox(this, wxID_ANY, wxT("Outputs"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer40->Add(m_checkbox_plot_outputs, 0, wxALL, 5);
+
+	bSizer39->Add(bSizer40, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer41;
+	bSizer41 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_button_plot_create = new wxButton(this, wxID_ANY, wxT("Create"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer41->Add(m_button_plot_create, 0, wxALL, 5);
+
+	bSizer39->Add(bSizer41, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer42;
+	bSizer42 = new wxBoxSizer(wxVERTICAL);
+
+	m_bitmap_plot = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
+	bSizer42->Add(m_bitmap_plot, 0, wxALL, 5);
+
+	bSizer39->Add(bSizer42, 0, wxEXPAND, 5);
+
+	bSizer12->Add(bSizer39, 0, wxEXPAND, 5);
+
+	bSizer2->Add(bSizer12, 1, wxEXPAND, 5);
+
+	bSizer2->Add(100, 0, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer13;
+	bSizer13 = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* bSizer14;
+	bSizer14 = new wxBoxSizer(wxVERTICAL);
 
 	m_staticText2 = new wxStaticText(this, wxID_ANY, wxT("Filters"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText2->Wrap(-1);
 	m_staticText2->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
-	bSizer2->Add(m_staticText2, 0, wxALL, 5);
+	bSizer14->Add(m_staticText2, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
+
+	bSizer13->Add(bSizer14, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer16;
+	bSizer16 = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* bSizer23;
+	bSizer23 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_market_val = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Market Value ($)"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_market_val->Wrap(-1);
+	bSizer23->Add(m_text_min_max_market_val, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_market_val = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer23->Add(m_textbox_min_market_val, 0, wxALL, 5);
+
+	m_text_line_market_val = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_market_val->Wrap(-1);
+	bSizer23->Add(m_text_line_market_val, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_market_val = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer23->Add(m_textbox_max_market_val, 0, wxALL, 5);
+
+	bSizer16->Add(bSizer23, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer231;
+	bSizer231 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_dominance = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Dominance (%)"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_dominance->Wrap(-1);
+	bSizer231->Add(m_text_min_max_dominance, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_dominance = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer231->Add(m_textbox_min_dominance, 0, wxALL, 5);
+
+	m_text_line_dominance = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_dominance->Wrap(-1);
+	bSizer231->Add(m_text_line_dominance, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_dominance = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer231->Add(m_textbox_max_dominance, 0, wxALL, 5);
+
+	bSizer16->Add(bSizer231, 0, wxEXPAND, 5);
+
+	bSizer13->Add(bSizer16, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer161;
+	bSizer161 = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* bSizer232;
+	bSizer232 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_blocks = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Blocks"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_blocks->Wrap(-1);
+	bSizer232->Add(m_text_min_max_blocks, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_blocks = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer232->Add(m_textbox_min_blocks, 0, wxALL, 5);
+
+	m_text_line_blocks = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_blocks->Wrap(-1);
+	bSizer232->Add(m_text_line_blocks, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_blocks = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer232->Add(m_textbox_max_blocks, 0, wxALL, 5);
+
+	bSizer161->Add(bSizer232, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer233;
+	bSizer233 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_transactions = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_transactions->Wrap(-1);
+	bSizer233->Add(m_text_min_max_transactions, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer233->Add(m_textbox_min_transactions, 0, wxALL, 5);
+
+	m_text_line_transactions = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_transactions->Wrap(-1);
+	bSizer233->Add(m_text_line_transactions, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer233->Add(m_textbox_max_transactions, 0, wxALL, 5);
+
+	bSizer161->Add(bSizer233, 0, wxEXPAND, 5);
+
+	bSizer13->Add(bSizer161, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer1611;
+	bSizer1611 = new wxBoxSizer(wxVERTICAL);
+
+	wxBoxSizer* bSizer2321;
+	bSizer2321 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_mem_transcations = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_mem_transcations->Wrap(-1);
+	bSizer2321->Add(m_text_min_max_mem_transcations, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_mem_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer2321->Add(m_textbox_min_mem_transactions, 0, wxALL, 5);
+
+	m_text_line_mem_transactions = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_mem_transactions->Wrap(-1);
+	bSizer2321->Add(m_text_line_mem_transactions, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_mem_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer2321->Add(m_textbox_max_mem_transactions, 0, wxALL, 5);
+
+	bSizer1611->Add(bSizer2321, 0, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer23211;
+	bSizer23211 = new wxBoxSizer(wxHORIZONTAL);
+
+	m_text_min_max_mem_tps = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum TPS"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_mem_tps->Wrap(-1);
+	bSizer23211->Add(m_text_min_max_mem_tps, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_textbox_min_mem_tps = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer23211->Add(m_textbox_min_mem_tps, 0, wxALL, 5);
+
+	m_text_line_mem_tps = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_line_mem_tps->Wrap(-1);
+	bSizer23211->Add(m_text_line_mem_tps, 0, wxALIGN_CENTER | wxALL, 5);
+
+	m_textbox_max_mem_tps = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
+	bSizer23211->Add(m_textbox_max_mem_tps, 0, wxALL, 5);
+
+	bSizer1611->Add(bSizer23211, 0, wxEXPAND, 5);
+
+	bSizer13->Add(bSizer1611, 1, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer15;
+	bSizer15 = new wxBoxSizer(wxHORIZONTAL);
 
 	m_button_apply_filters = new wxButton(this, wxID_ANY, wxT("Apply"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer2->Add(m_button_apply_filters, 0, wxALL, 5);
+	bSizer15->Add(m_button_apply_filters, 0, wxALL, 5);
 
 	m_button_clear_filters = new wxButton(this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer2->Add(m_button_clear_filters, 0, wxALL, 5);
+	bSizer15->Add(m_button_clear_filters, 0, wxALL, 5);
 
+	bSizer13->Add(bSizer15, 0, wxEXPAND, 5);
+
+	bSizer2->Add(bSizer13, 1, wxEXPAND, 5);
 
 	bSizer1->Add(bSizer2, 0, wxEXPAND, 5);
-
-	wxBoxSizer* bSizer3;
-	bSizer3 = new wxBoxSizer(wxVERTICAL);
-
-	wxBoxSizer* bSizer41;
-	bSizer41 = new wxBoxSizer(wxHORIZONTAL);
-
-	m_staticText21 = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Value"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText21->Wrap(-1);
-	bSizer41->Add(m_staticText21, 0, wxALL, 5);
-
-	m_textCtrl_min_val = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer41->Add(m_textCtrl_min_val, 0, wxALL, 5);
-
-	m_staticText211 = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText211->Wrap(-1);
-	bSizer41->Add(m_staticText211, 0, wxALL, 5);
-
-	m_textCtrl_max_val = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer41->Add(m_textCtrl_max_val, 0, wxALL, 5);
-
-
-	bSizer3->Add(bSizer41, 0, wxEXPAND, 5);
-
-	wxBoxSizer* bSizer42;
-	bSizer42 = new wxBoxSizer(wxHORIZONTAL);
-
-	m_staticText31 = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Blocks"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText31->Wrap(-1);
-	bSizer42->Add(m_staticText31, 0, wxALL, 5);
-
-	m_textCtrl_min_blocks = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer42->Add(m_textCtrl_min_blocks, 0, wxALL, 5);
-
-	m_staticText2111 = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText2111->Wrap(-1);
-	bSizer42->Add(m_staticText2111, 0, wxALL, 5);
-
-	m_textCtrl_max_blocks = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer42->Add(m_textCtrl_max_blocks, 0, wxALL, 5);
-
-
-	bSizer3->Add(bSizer42, 0, wxEXPAND, 5);
-
-	wxBoxSizer* bSizer43;
-	bSizer43 = new wxBoxSizer(wxHORIZONTAL);
-
-	m_staticText33 = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Memory Size"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText33->Wrap(-1);
-	bSizer43->Add(m_staticText33, 0, wxALL, 5);
-
-	m_textCtrl_min_mem = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer43->Add(m_textCtrl_min_mem, 0, wxALL, 5);
-
-	m_staticText2112 = new wxStaticText(this, wxID_ANY, wxT("-"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText2112->Wrap(-1);
-	bSizer43->Add(m_staticText2112, 0, wxALL, 5);
-
-	m_textCtrl_max_mem = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
-	bSizer43->Add(m_textCtrl_max_mem, 0, wxALL, 5);
-
-
-	bSizer3->Add(bSizer43, 0, wxEXPAND, 5);
-
-
-	bSizer1->Add(bSizer3, 1, wxEXPAND, 5);
-
 
 	this->SetSizer(bSizer1);
 	this->Layout();
@@ -417,33 +590,36 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	this->Centre(wxBOTH);
 
 	this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(MyFrame1::on_close));
-	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_open_db), this, m_menuItem_open_db->GetId());
-	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_save_db), this, m_menuItem_save_db->GetId());
-	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_update_db), this, m_menuItem_update_db->GetId());
-	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_parse), this, m_menuItem_parse->GetId());
-	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_test_func), this, m_menuItem_test_func->GetId());
-	m_menu3->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_help), this, m_menuItem_help->GetId());
-	m_comboBox_table->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
+	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_open_db), this, m_menuitem_open_db->GetId());
+	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_save_db), this, m_menuitem_save_db->GetId());
+	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_update_db), this, m_menuitem_update_db->GetId());
+	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_parse), this, m_menuitem_parse->GetId());
+	m_menu3->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_help), this, m_menuitem_help->GetId());
+	m_combobox_table->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
 
-	m_open_dial = new MyDialog1(nullptr, wxID_ANY, "Open DB");
-	m_open_dial->db_connected.bind(this, &MyFrame1::on_db_connected);
+	m_open_db_dialog = new MyDialog1(nullptr, wxID_ANY, "DB Connection Settings");
+	m_open_db_dialog->db_connected.bind(this, &MyFrame1::on_db_connected);
 
-	m_textCtrl_min_val->SetValue("0");
-	m_textCtrl_max_val->SetValue("0");
-	m_textCtrl_min_blocks->SetValue("0");
-	m_textCtrl_max_blocks->SetValue("0");
-	m_textCtrl_min_mem->SetValue("0");
-	m_textCtrl_max_mem->SetValue("0");
-
-	std::cout << "DEBUG: Frame1 created!" << std::endl;
+	m_textbox_min_market_val->SetValue("0");
+	m_textbox_min_dominance->SetValue("0");
+	m_textbox_min_transactions->SetValue("0");
+	m_textbox_min_blocks->SetValue("0");
+	m_textbox_min_mem_transactions->SetValue("0");
+	m_textbox_min_mem_tps->SetValue("0");
+	m_textbox_max_market_val->SetValue("0");
+	m_textbox_max_dominance->SetValue("0");
+	m_textbox_max_transactions->SetValue("0");
+	m_textbox_max_blocks->SetValue("0");
+	m_textbox_max_mem_transactions->SetValue("0");
+	m_textbox_max_mem_tps->SetValue("0");
 }
 
 MyFrame1::~MyFrame1() {
 
 	this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(MyFrame1::on_close));
-	m_comboBox_table->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
+	m_combobox_table->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
 }

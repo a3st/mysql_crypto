@@ -65,6 +65,7 @@ public:
                     parse_data.back()["difficulty"] = "0";
                     parse_data.back()["next_difficulty_estimate"] = "0";
                     parse_data.back()["blockchain_size"] = "0";
+                    parse_data.back()["outputs"] = "0";
                     parse_data.back()["blocks"] = "0";
                     parse_data.back()["transactions"] = "0";
                     parse_data.back()["market_price_usd"] = "0";
