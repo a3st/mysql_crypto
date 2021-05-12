@@ -194,6 +194,54 @@ public:
 		return cargo;
 	}
 
+	CargoData<std::string> get_coin_plot_data(const std::string& coin_name) {
+
+		if (!m_connected) {
+			throw std::runtime_error("Вы не подключены к базе данных");
+		}
+
+		std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(m_con->createStatement());
+
+		uint32_t id = 0;
+
+		try {
+
+			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT id FROM crypto.currency WHERE \
+			coin_name='" + coin_name + "'"));
+
+			while (result->next()) {
+				id = result->getInt(1);
+			}
+
+		}
+		catch (sql::SQLException& e) {
+			std::cout << e.what() << std::endl;
+		}
+
+		CargoData<std::string> cargo(2);
+
+		cargo.new_line();
+		cargo.push_data("date");
+		cargo.push_data("market_value");
+
+		try {
+
+			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery("SELECT * FROM crypto.daily WHERE \
+			id='" + std::to_string(id) + "'"));
+
+			while (result->next()) {
+
+				cargo.new_line();
+				cargo.push_data(result->getString(2));
+				cargo.push_data(std::to_string(result->getDouble(3)));
+			}
+		}
+		catch (sql::SQLException& e) {
+			std::cout << e.what() << std::endl;
+		}
+		return cargo;
+	}
+
 	/* std::tuple<std::string, float_t> call_test_func() {
 
 		if (!m_connected) {

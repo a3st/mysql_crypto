@@ -18,39 +18,88 @@ void MyFrame1::on_db_connected() {
 	for (uint32_t i = 0; i < tables.size(); i++) {
 		tables_conv.push_back(tables[i].c_str());
 	}
-
 	m_combobox_table->Set(tables_conv);
-	m_combobox_table->SetValue("currency");
+	m_combobox_table->SetValue(tables_conv[0]);
 
 	m_caches_cargos["currency"] = g_database_handler->get_table_data("currency");
 	m_caches_cargos["mem_pool"] = g_database_handler->get_table_data("mem_pool");
 	m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
 	m_caches_cargos["daily"] = g_database_handler->get_table_data("daily");
 
-	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
+	tables_conv.clear();
+	for (uint32_t i = 1; i < m_caches_cargos["currency"].get_rows(); i++) {
+		tables_conv.push_back(m_caches_cargos["currency"].get_data(i, 1).c_str());
+	}
+	m_combobox_plot_coin->Set(tables_conv);
+	m_combobox_plot_coin->SetValue(tables_conv[0]);
+
+	for (uint32_t i = 1; i < m_caches_cargos["currency"].get_rows(); i++) {
+
+		const std::string coin_name = m_caches_cargos["currency"].get_data(i, 1);
+		m_caches_cargos_plot[coin_name] = g_database_handler->get_coin_plot_data(coin_name);
+	}
+
+	this->set_plot_values_by_cargo(m_caches_cargos_plot[tables_conv[0].c_str().AsChar()]);
+	this->set_table_values_by_cargo(m_caches_cargos["currency"]);
 }
 
-void MyFrame1::set_table_values_by_cargo(wxGrid* grid, const CargoData<std::string>& cargo) {
+void MyFrame1::set_table_values_by_cargo(const CargoData<std::string>& cargo) {
 
-	if (grid->GetNumberRows() > 0) {
-		grid->DeleteRows(0, grid->GetNumberRows());
+	if (m_grid_table->GetNumberRows() > 0) {
+		m_grid_table->DeleteRows(0, m_grid_table->GetNumberRows());
 	}
-	if (grid->GetNumberCols() > 0) {
-		grid->DeleteCols(0, grid->GetNumberCols());
+	if (m_grid_table->GetNumberCols() > 0) {
+		m_grid_table->DeleteCols(0, m_grid_table->GetNumberCols());
 	}
 
-	grid->InsertCols(0, cargo.get_cols());
-	grid->InsertRows(0, cargo.get_rows() - 1);
+	m_grid_table->InsertCols(0, cargo.get_cols());
+	m_grid_table->InsertRows(0, cargo.get_rows() - 1);
 
 	for (uint32_t i = 0; i < cargo.get_cols(); i++) {
-		grid->SetColLabelValue(i, cargo.get_data(0, i));
+		m_grid_table->SetColLabelValue(i, cargo.get_data(0, i));
 	}
 
 	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
 		for (uint32_t j = 0; j < cargo.get_cols(); j++) {
-			grid->SetCellValue(i - 1, j, cargo.get_data(i, j));
+			m_grid_table->SetCellValue(i - 1, j, cargo.get_data(i, j));
 		}
 	}
+}
+
+void MyFrame1::set_plot_values_by_cargo(const CargoData<std::string>& cargo) {
+
+	if (m_chart_data) {
+		delete m_chart_line;
+		delete m_legend_line;
+		m_chart_data.~wxSharedPtr();
+	}
+
+	wxVector<wxString> labels;
+
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		labels.push_back(cargo.get_data(i, 0));
+	}
+
+	m_chart_data = wxChartsCategoricalData::make_shared(labels);
+
+	wxVector<wxDouble> points;
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		points.push_back(std::stod(cargo.get_data(i, 1)));
+	}
+
+	m_data_set = new wxChartsDoubleDataset("market_value data_set", points);
+	m_chart_data->AddDataset(m_data_set);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line = new wxLineChartCtrl(m_panel_plot, wxID_ANY, m_chart_data,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data(m_chart_data->GetDatasets());
+	m_legend_line = new wxChartsLegendCtrl(m_panel_plot, wxID_ANY, legend_data,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line->SetSize(400, 200);
 }
 
 void MyFrame1::on_close(wxCloseEvent& event) {
@@ -87,7 +136,14 @@ void MyFrame1::on_menu_sel_update_db(wxCommandEvent& event) {
 		m_caches_cargos["stats"] = g_database_handler->get_table_data("stats");
 		m_caches_cargos["daily"] = g_database_handler->get_table_data("daily");
 
-		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["currency"]);
+		for (uint32_t i = 1; i < m_caches_cargos["currency"].get_rows(); i++) {
+
+			const std::string coin_name = m_caches_cargos["currency"].get_data(i, 1);
+			m_caches_cargos_plot[coin_name] = g_database_handler->get_coin_plot_data(coin_name);
+		}
+
+		this->set_plot_values_by_cargo(m_caches_cargos_plot[m_combobox_plot_coin->GetValue().c_str().AsChar()]);
+		this->set_table_values_by_cargo(m_caches_cargos["currency"]);
 	}
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Îøèáêà");
@@ -221,7 +277,7 @@ void MyFrame1::on_menu_sel_help(wxCommandEvent& event) {
 void MyFrame1::on_combobox_sel(wxCommandEvent& event) {
 
 	std::string cur = m_combobox_table->GetValue().c_str().AsChar();
-	this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
+	this->set_table_values_by_cargo(m_caches_cargos[cur]);
 }
 
 void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
@@ -253,7 +309,7 @@ void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
 
 	try {
 		m_caches_cargos["filter"] = g_database_handler->get_filter_data(cargo);
-		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos["filter"]);
+		this->set_table_values_by_cargo(m_caches_cargos["filter"]);
 	}
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Îøèáêà");
@@ -265,7 +321,7 @@ void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
 
 	std::string cur = m_combobox_table->GetValue().c_str().AsChar();
 	if (!m_caches_cargos.empty()) {
-		this->set_table_values_by_cargo(m_grid_table, m_caches_cargos[cur]);
+		this->set_table_values_by_cargo(m_caches_cargos[cur]);
 	}
 
 	m_textbox_min_market_val->SetValue("0");
@@ -280,6 +336,12 @@ void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
 	m_textbox_max_blocks->SetValue("0");
 	m_textbox_max_mem_transactions->SetValue("0");
 	m_textbox_max_mem_tps->SetValue("0");
+}
+
+void MyFrame1::on_combobox_coin_plot(wxCommandEvent& event) {
+
+	std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+	this->set_plot_values_by_cargo(m_caches_cargos_plot[cur]);
 }
 
 MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(nullptr, wxID_ANY, title, pos, size, style) {
@@ -322,6 +384,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer1;
 	bSizer1 = new wxBoxSizer(wxVERTICAL);
 
+
 	bSizer1->Add(0, 5, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer8;
@@ -360,6 +423,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 
 	bSizer8->Add(m_grid_table, 0, wxALL | wxEXPAND, 5);
 
+
 	bSizer1->Add(bSizer8, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer2;
@@ -378,51 +442,58 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_combobox_table = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	bSizer38->Add(m_combobox_table, 0, wxALL, 5);
 
+
 	bSizer12->Add(bSizer38, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer39;
 	bSizer39 = new wxBoxSizer(wxVERTICAL);
 
-	m_staticText11 = new wxStaticText(this, wxID_ANY, wxT("Plot"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText11 = new wxStaticText(this, wxID_ANY, wxT("Market Value Plot"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText11->Wrap(-1);
 	bSizer39->Add(m_staticText11, 0, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	wxBoxSizer* bSizer40;
 	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_checkbox_plot_market_val = new wxCheckBox(this, wxID_ANY, wxT("Market Value ($)"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer40->Add(m_checkbox_plot_market_val, 0, wxALL, 5);
+	m_staticText21 = new wxStaticText(this, wxID_ANY, wxT("Coin"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText21->Wrap(-1);
+	bSizer40->Add(m_staticText21, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	m_checkbox_plot_dominance = new wxCheckBox(this, wxID_ANY, wxT("Dominance"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer40->Add(m_checkbox_plot_dominance, 0, wxALL, 5);
-
-	m_checkbox_plot_transactions = new wxCheckBox(this, wxID_ANY, wxT("Transactions"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer40->Add(m_checkbox_plot_transactions, 0, wxALL, 5);
-
-	m_checkbox_plot_outputs = new wxCheckBox(this, wxID_ANY, wxT("Outputs"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer40->Add(m_checkbox_plot_outputs, 0, wxALL, 5);
+	m_combobox_plot_coin = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
+	bSizer40->Add(m_combobox_plot_coin, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	bSizer39->Add(bSizer40, 0, wxEXPAND, 5);
-
-	wxBoxSizer* bSizer41;
-	bSizer41 = new wxBoxSizer(wxHORIZONTAL);
-
-	m_button_plot_create = new wxButton(this, wxID_ANY, wxT("Create"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer41->Add(m_button_plot_create, 0, wxALL, 5);
-
-	bSizer39->Add(bSizer41, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer42;
 	bSizer42 = new wxBoxSizer(wxVERTICAL);
 
-	m_bitmap_plot = new wxStaticBitmap(this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, 0);
-	bSizer42->Add(m_bitmap_plot, 0, wxALL, 5);
+	m_panel_plot = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(400, 200), wxTAB_TRAVERSAL);
+
+	wxVector<wxString> labels;
+	m_chart_data = wxChartsCategoricalData::make_shared(labels);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line = new wxLineChartCtrl(m_panel_plot, wxID_ANY, m_chart_data,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data(m_chart_data->GetDatasets());
+	m_legend_line = new wxChartsLegendCtrl(m_panel_plot, wxID_ANY, legend_data,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line->SetSize(400, 200);
+
+	bSizer42->Add(m_panel_plot, 1, wxEXPAND | wxALL, 5);
+
 
 	bSizer39->Add(bSizer42, 0, wxEXPAND, 5);
 
+
 	bSizer12->Add(bSizer39, 0, wxEXPAND, 5);
 
+
 	bSizer2->Add(bSizer12, 1, wxEXPAND, 5);
+
 
 	bSizer2->Add(100, 0, 0, wxEXPAND, 5);
 
@@ -437,6 +508,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_staticText2->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
 	bSizer14->Add(m_staticText2, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
+
 
 	bSizer13->Add(bSizer14, 0, wxEXPAND, 5);
 
@@ -460,6 +532,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_market_val = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer23->Add(m_textbox_max_market_val, 0, wxALL, 5);
 
+
 	bSizer16->Add(bSizer23, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer231;
@@ -479,7 +552,9 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_dominance = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer231->Add(m_textbox_max_dominance, 0, wxALL, 5);
 
+
 	bSizer16->Add(bSizer231, 0, wxEXPAND, 5);
+
 
 	bSizer13->Add(bSizer16, 0, wxEXPAND, 5);
 
@@ -503,6 +578,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_blocks = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer232->Add(m_textbox_max_blocks, 0, wxALL, 5);
 
+
 	bSizer161->Add(bSizer232, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer233;
@@ -522,7 +598,9 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer233->Add(m_textbox_max_transactions, 0, wxALL, 5);
 
+
 	bSizer161->Add(bSizer233, 0, wxEXPAND, 5);
+
 
 	bSizer13->Add(bSizer161, 0, wxEXPAND, 5);
 
@@ -546,6 +624,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_mem_transactions = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer2321->Add(m_textbox_max_mem_transactions, 0, wxALL, 5);
 
+
 	bSizer1611->Add(bSizer2321, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer23211;
@@ -565,7 +644,9 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_textbox_max_mem_tps = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(50, -1), 0);
 	bSizer23211->Add(m_textbox_max_mem_tps, 0, wxALL, 5);
 
+
 	bSizer1611->Add(bSizer23211, 0, wxEXPAND, 5);
+
 
 	bSizer13->Add(bSizer1611, 1, wxEXPAND, 5);
 
@@ -578,11 +659,15 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_button_clear_filters = new wxButton(this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0);
 	bSizer15->Add(m_button_clear_filters, 0, wxALL, 5);
 
-	bSizer13->Add(bSizer15, 0, wxEXPAND, 5);
+
+	bSizer13->Add(bSizer15, 1, wxEXPAND, 5);
+
 
 	bSizer2->Add(bSizer13, 1, wxEXPAND, 5);
 
+
 	bSizer1->Add(bSizer2, 0, wxEXPAND, 5);
+
 
 	this->SetSizer(bSizer1);
 	this->Layout();
@@ -598,6 +683,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_combobox_table->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
+	m_combobox_plot_coin->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot), NULL, this);
 
 	m_open_db_dialog = new MyDialog1(nullptr, wxID_ANY, "DB Connection Settings");
 	m_open_db_dialog->db_connected.bind(this, &MyFrame1::on_db_connected);
@@ -622,4 +708,6 @@ MyFrame1::~MyFrame1() {
 	m_combobox_table->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
+	m_combobox_plot_coin->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot), NULL, this);
+
 }
