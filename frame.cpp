@@ -314,7 +314,6 @@ void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Îøèáêà");
 	}
-
 }
 
 void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
@@ -709,5 +708,4 @@ MyFrame1::~MyFrame1() {
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
 	m_combobox_plot_coin->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot), NULL, this);
-
 }
