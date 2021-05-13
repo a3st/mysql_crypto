@@ -32,6 +32,8 @@ void MyFrame1::on_db_connected() {
 	}
 	m_combobox_plot_coin->Set(tables_conv);
 	m_combobox_plot_coin->SetValue(tables_conv[0]);
+	m_combobox_plot_coin_compare->Set(tables_conv);
+	m_combobox_plot_coin_compare->SetValue(tables_conv[0]);
 
 	for (uint32_t i = 1; i < m_caches_cargos["currency"].get_rows(); i++) {
 
@@ -89,6 +91,50 @@ void MyFrame1::set_plot_values_by_cargo(const CargoData<std::string>& cargo) {
 
 	m_data_set = new wxChartsDoubleDataset("market_value data_set", points);
 	m_chart_data->AddDataset(m_data_set);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line = new wxLineChartCtrl(m_panel_plot, wxID_ANY, m_chart_data,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data(m_chart_data->GetDatasets());
+	m_legend_line = new wxChartsLegendCtrl(m_panel_plot, wxID_ANY, legend_data,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line->SetSize(400, 200);
+}
+
+void MyFrame1::set_plot_compare_values_by_cargo(const CargoData<std::string>& cargo, const CargoData<std::string>& cargo_compare) {
+
+	if (m_chart_data) {
+		delete m_chart_line;
+		delete m_legend_line;
+		m_chart_data.~wxSharedPtr();
+	}
+
+	wxVector<wxString> labels;
+
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		labels.push_back(cargo.get_data(i, 0));
+	}
+
+	m_chart_data = wxChartsCategoricalData::make_shared(labels);
+
+	wxVector<wxDouble> points;
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		points.push_back(std::stod(cargo.get_data(i, 1)));
+	}
+
+	m_data_set = new wxChartsDoubleDataset("market_value data_set", points);
+	m_chart_data->AddDataset(m_data_set);
+
+	wxVector<wxDouble> points_2;
+	for (uint32_t i = 1; i < cargo_compare.get_rows(); i++) {
+		points_2.push_back(std::stod(cargo_compare.get_data(i, 1)));
+	}
+
+	m_data_set_2 = new wxChartsDoubleDataset("market_value data_set_2", points_2);
+	m_chart_data->AddDataset(m_data_set_2);
 
 	// Create the line chart widget from the constructed data
 	m_chart_line = new wxLineChartCtrl(m_panel_plot, wxID_ANY, m_chart_data,
@@ -339,8 +385,41 @@ void MyFrame1::on_button_click_clear_filters(wxCommandEvent& event) {
 
 void MyFrame1::on_combobox_coin_plot(wxCommandEvent& event) {
 
-	std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
-	this->set_plot_values_by_cargo(m_caches_cargos_plot[cur]);
+	if (!m_checkbox_compare_plot->GetValue()) {
+
+		const std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+		this->set_plot_values_by_cargo(m_caches_cargos_plot[cur]);
+	} else {
+
+		const std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+		const std::string cur_compare = m_combobox_plot_coin_compare->GetValue().c_str().AsChar();
+		this->set_plot_compare_values_by_cargo(m_caches_cargos_plot[cur], m_caches_cargos_plot[cur_compare]);
+	}
+}
+
+void MyFrame1::on_checkbox_compare_plot(wxCommandEvent& event) {
+
+	if (!m_checkbox_compare_plot->GetValue()) {
+
+		const std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+		this->set_plot_values_by_cargo(m_caches_cargos_plot[cur]);
+	}
+	else {
+
+		const std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+		const std::string cur_compare = m_combobox_plot_coin_compare->GetValue().c_str().AsChar();
+		this->set_plot_compare_values_by_cargo(m_caches_cargos_plot[cur], m_caches_cargos_plot[cur_compare]);
+	}
+}
+
+void MyFrame1::on_combobox_coin_plot_compare(wxCommandEvent& event) {
+
+	if (m_checkbox_compare_plot->GetValue()) {
+
+		const std::string cur = m_combobox_plot_coin->GetValue().c_str().AsChar();
+		const std::string cur_compare = m_combobox_plot_coin_compare->GetValue().c_str().AsChar();
+		this->set_plot_compare_values_by_cargo(m_caches_cargos_plot[cur], m_caches_cargos_plot[cur_compare]);
+	}
 }
 
 MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(nullptr, wxID_ANY, title, pos, size, style) {
@@ -460,6 +539,12 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 
 	m_combobox_plot_coin = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	bSizer40->Add(m_combobox_plot_coin, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	m_checkbox_compare_plot = new wxCheckBox(this, wxID_ANY, wxT("Compare"), wxDefaultPosition, wxDefaultSize, 0);
+	bSizer40->Add(m_checkbox_compare_plot, 0, wxALIGN_CENTER_VERTICAL, 5);
+
+	m_combobox_plot_coin_compare = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
+	bSizer40->Add(m_combobox_plot_coin_compare, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	bSizer39->Add(bSizer40, 0, wxEXPAND, 5);
 
@@ -683,6 +768,8 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_button_apply_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
 	m_combobox_plot_coin->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot), NULL, this);
+	m_combobox_plot_coin_compare->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot_compare), NULL, this);
+	m_checkbox_compare_plot->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(MyFrame1::on_checkbox_compare_plot), NULL, this);
 
 	m_open_db_dialog = new MyDialog1(nullptr, wxID_ANY, "DB Connection Settings");
 	m_open_db_dialog->db_connected.bind(this, &MyFrame1::on_db_connected);
@@ -708,4 +795,6 @@ MyFrame1::~MyFrame1() {
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
 	m_combobox_plot_coin->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot), NULL, this);
+	m_checkbox_compare_plot->Disconnect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(MyFrame1::on_checkbox_compare_plot), NULL, this);
+	m_combobox_plot_coin_compare->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_coin_plot_compare), NULL, this);
 }

@@ -50,6 +50,7 @@ private:
 	void on_db_connected();
 	void set_table_values_by_cargo(const CargoData<std::string>& cargo);
 	void set_plot_values_by_cargo(const CargoData<std::string>& cargo);
+	void set_plot_compare_values_by_cargo(const CargoData<std::string>& cargo, const CargoData<std::string>& cargo_compare);
 
 protected:
 
@@ -63,6 +64,8 @@ protected:
 	wxComboBox* m_combobox_table;
 	wxStaticText* m_staticText11;
 	wxComboBox* m_combobox_plot_coin;
+	wxCheckBox* m_checkbox_compare_plot;
+	wxComboBox* m_combobox_plot_coin_compare;
 	wxStaticText* m_staticText21;
 	wxStaticText* m_staticText2;
 	wxStaticText* m_text_min_max_market_val;
@@ -93,6 +96,7 @@ protected:
 	wxButton* m_button_clear_filters;
 
 	wxChartsDoubleDataset::ptr m_data_set;
+	wxChartsDoubleDataset::ptr m_data_set_2;
 	wxChartsCategoricalData::ptr m_chart_data;
 	wxLineChartCtrl* m_chart_line;
 	wxChartsLegendCtrl* m_legend_line;
@@ -107,6 +111,8 @@ protected:
 	virtual void on_button_click_apply_filters(wxCommandEvent& event);
 	virtual void on_button_click_clear_filters(wxCommandEvent& event);
 	virtual void on_combobox_coin_plot(wxCommandEvent& event);
+	virtual void on_checkbox_compare_plot(wxCommandEvent& event);
+	virtual void on_combobox_coin_plot_compare(wxCommandEvent& event);
 
 public:
 
