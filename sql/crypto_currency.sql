@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `currency`;
 CREATE TABLE `currency` (
   `id` int NOT NULL,
   `coin_name` char(45) DEFAULT NULL,
-  `value` float DEFAULT NULL,
+  `market_value` float DEFAULT NULL,
   `market_cap` bigint DEFAULT NULL,
   `dominance` float DEFAULT NULL,
   KEY `fk_id_idx` (`id`),
@@ -40,7 +40,7 @@ CREATE TABLE `currency` (
 
 LOCK TABLES `currency` WRITE;
 /*!40000 ALTER TABLE `currency` DISABLE KEYS */;
-INSERT INTO `currency` VALUES (0,'bitcoin',57518,1073254049010,42.26),(1,'bitcoin-abc',36.15,676876067,0.03),(2,'bitcoin-cash',1434.27,27101715356,1.07),(3,'bitcoin-sv',345.24,6544596282,0.26),(4,'cardano',1.71,55312072555,2.18),(5,'dash',399.85,4054019983,0.16),(6,'dogecoin',0.48495,62822962435,2.47),(7,'eos',9.96,9619970082,0.38),(8,'ethereum',4111.82,476218921517,18.75),(9,'groestlcoin',1.59,122888586,0),(10,'litecoin',380.08,25371303481,1),(11,'mixin',0,0,0),(12,'monero',464.64,8319999452,0.33),(13,'ripple',1.52,70022609869,2.76),(14,'stellar',0.705986,16281171635,0.64),(15,'tezos',6.69,5172566855,0.2),(16,'zcash',309.33,3427213745,0.13);
+INSERT INTO `currency` VALUES (0,'bitcoin',54455,1018011834622,41.13),(1,'bitcoin-abc',47.57,890795922,0.04),(2,'bitcoin-cash',1446.26,27073352371,1.09),(3,'bitcoin-sv',360.59,6718845513,0.27),(4,'cardano',1.74,55679896334,2.25),(5,'dash',395.91,4001352793,0.16),(6,'dogecoin',0.468078,60683055734,2.45),(7,'eos',12.09,11538718391,0.47),(8,'ethereum',4105.74,474175090485,19.16),(9,'groestlcoin',1.4,107972002,0),(10,'litecoin',356.83,23779832992,0.96),(11,'mixin',798.17,473226902,0.0191194),(12,'monero',439.85,7877627594,0.32),(13,'ripple',1.42,65451933896,2.64),(14,'stellar',0.667163,15406461302,0.62),(15,'tezos',6.93,5316094195,0.21),(16,'zcash',356.15,3939908297,0.16);
 /*!40000 ALTER TABLE `currency` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -53,4 +53,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-05-10 23:04:18
+-- Dump completed on 2021-05-13  5:38:21
