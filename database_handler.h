@@ -66,15 +66,19 @@ public:
 					result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
 						"SELECT * FROM crypto." + table + " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'" +
 						" && crypto." + table + ".date='" + cargo.get_data(i, 1) + "'"));
+
+					if (result->rowsCount() > 0) {
+						continue;
+					}
 				} else {
 					result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
 						"SELECT * FROM crypto." + table + " WHERE crypto." + table + ".id='" + cargo.get_data(i, 0) + "'"));
-				}
 
-				if (result->rowsCount() > 0) {
+					if (result->rowsCount() > 0) {
 
-					this->update_table_data(table, cargo);
-					continue;
+						this->update_table_data(table, cargo);
+						continue;
+					}
 				}
 			}
 			catch (sql::SQLException& e) {
@@ -137,6 +141,24 @@ public:
 			catch (sql::SQLException& e) {
 				std::cout << e.what() << std::endl;
 			}
+		}
+	}
+
+	void delete_data(const std::string& table, const CargoData<std::string>& source, const uint32_t row) {
+
+		if (!m_connected) {
+			throw std::runtime_error("Вы не подключены к базе данных");
+		}
+
+		std::unique_ptr<sql::Statement> stmt = std::unique_ptr<sql::Statement>(m_con->createStatement());
+
+		try {
+
+			std::unique_ptr<sql::ResultSet> result = std::unique_ptr<sql::ResultSet>(stmt->executeQuery(
+				"DELETE FROM crypto." + table + " WHERE id='" + source.get_data(row + 1, 0) + "'"));
+		}
+		catch (sql::SQLException& e) {
+			std::cout << e.what() << std::endl;
 		}
 	}
 
@@ -218,11 +240,12 @@ public:
 			std::cout << e.what() << std::endl;
 		}
 
-		CargoData<std::string> cargo(2);
+		CargoData<std::string> cargo(3);
 
 		cargo.new_line();
 		cargo.push_data("date");
 		cargo.push_data("market_value");
+		cargo.push_data("transactions");
 
 		try {
 
@@ -234,6 +257,7 @@ public:
 				cargo.new_line();
 				cargo.push_data(result->getString(2));
 				cargo.push_data(std::to_string(result->getDouble(3)));
+				cargo.push_data(std::to_string(result->getUInt64(5)));
 			}
 		}
 		catch (sql::SQLException& e) {

@@ -46,6 +46,8 @@ private:
 
 	std::map<std::string, CargoData<std::string>> m_caches_cargos;
 	std::map<std::string, CargoData<std::string>> m_caches_cargos_plot;
+	
+	uint32_t m_selected_row;
 
 	void on_db_connected();
 	void set_table_values_by_cargo(const CargoData<std::string>& cargo);
@@ -55,6 +57,7 @@ private:
 protected:
 
 	wxPanel* m_panel_plot;
+	wxPanel* m_panel_plot_2;
 	wxMenuBar* m_menubar4;
 	wxMenu* m_menu2;
 	wxMenu* m_menu31;
@@ -68,6 +71,7 @@ protected:
 	wxComboBox* m_combobox_plot_coin_compare;
 	wxStaticText* m_staticText21;
 	wxStaticText* m_staticText2;
+	wxStaticText* m_staticText266;
 	wxStaticText* m_text_min_max_market_val;
 	wxTextCtrl* m_textbox_min_market_val;
 	wxStaticText* m_text_line_market_val;
@@ -94,6 +98,7 @@ protected:
 	wxTextCtrl* m_textbox_max_mem_tps;
 	wxButton* m_button_apply_filters;
 	wxButton* m_button_clear_filters;
+	wxStaticText* m_staticText22;
 
 	wxChartsDoubleDataset::ptr m_data_set;
 	wxChartsDoubleDataset::ptr m_data_set_2;
@@ -101,13 +106,23 @@ protected:
 	wxLineChartCtrl* m_chart_line;
 	wxChartsLegendCtrl* m_legend_line;
 
+	wxChartsDoubleDataset::ptr m_data_set_3;
+	wxChartsDoubleDataset::ptr m_data_set_4;
+	wxChartsCategoricalData::ptr m_chart_data_2;
+	wxLineChartCtrl* m_chart_line_2;
+	wxChartsLegendCtrl* m_legend_line_2;
+
 	virtual void on_close(wxCloseEvent& event);
 	virtual void on_menu_sel_open_db(wxCommandEvent& event);
 	virtual void on_menu_sel_save_db(wxCommandEvent& event);
 	virtual void on_menu_sel_update_db(wxCommandEvent& event);
+	virtual void on_menu_sel_delete_row(wxCommandEvent& event);
+	virtual void on_menu_sel_add_row(wxCommandEvent& event);
 	virtual void on_menu_sel_parse(wxCommandEvent& event);
 	virtual void on_menu_sel_help(wxCommandEvent& event);
 	virtual void on_combobox_sel(wxCommandEvent& event);
+	virtual void on_grid_cell_change(wxGridEvent& event);
+	virtual void on_grid_cell_select(wxGridEvent& event);
 	virtual void on_button_click_apply_filters(wxCommandEvent& event);
 	virtual void on_button_click_clear_filters(wxCommandEvent& event);
 	virtual void on_combobox_coin_plot(wxCommandEvent& event);

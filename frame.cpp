@@ -102,6 +102,39 @@ void MyFrame1::set_plot_values_by_cargo(const CargoData<std::string>& cargo) {
 		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
 
 	m_chart_line->SetSize(400, 200);
+
+	if (m_chart_data_2) {
+		delete m_chart_line_2;
+		delete m_legend_line_2;
+		m_chart_data_2.~wxSharedPtr();
+	}
+
+	wxVector<wxString> labels_2;
+
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		labels_2.push_back(cargo.get_data(i, 0));
+	}
+
+	m_chart_data_2 = wxChartsCategoricalData::make_shared(labels_2);
+
+	wxVector<wxDouble> points_3;
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		points_3.push_back(std::stod(cargo.get_data(i, 2)));
+	}
+
+	m_data_set_2 = new wxChartsDoubleDataset("transactions data_set_2", points_3);
+	m_chart_data_2->AddDataset(m_data_set_2);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line_2 = new wxLineChartCtrl(m_panel_plot_2, wxID_ANY, m_chart_data_2,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data_2(m_chart_data_2->GetDatasets());
+	m_legend_line_2 = new wxChartsLegendCtrl(m_panel_plot_2, wxID_ANY, legend_data_2,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line_2->SetSize(400, 200);
 }
 
 void MyFrame1::set_plot_compare_values_by_cargo(const CargoData<std::string>& cargo, const CargoData<std::string>& cargo_compare) {
@@ -146,6 +179,47 @@ void MyFrame1::set_plot_compare_values_by_cargo(const CargoData<std::string>& ca
 		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
 
 	m_chart_line->SetSize(400, 200);
+
+	if (m_chart_data_2) {
+		delete m_chart_line_2;
+		delete m_legend_line_2;
+		m_chart_data_2.~wxSharedPtr();
+	}
+
+	wxVector<wxString> labels_2;
+
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		labels_2.push_back(cargo.get_data(i, 0));
+	}
+
+	m_chart_data_2 = wxChartsCategoricalData::make_shared(labels_2);
+
+	wxVector<wxDouble> points_3;
+	for (uint32_t i = 1; i < cargo.get_rows(); i++) {
+		points_3.push_back(std::stod(cargo.get_data(i, 2)));
+	}
+
+	m_data_set_3 = new wxChartsDoubleDataset("transactions data_set_3", points_3);
+	m_chart_data_2->AddDataset(m_data_set_3);
+
+	wxVector<wxDouble> points_4;
+	for (uint32_t i = 1; i < cargo_compare.get_rows(); i++) {
+		points_4.push_back(std::stod(cargo_compare.get_data(i, 2)));
+	}
+
+	m_data_set_4 = new wxChartsDoubleDataset("transactions data_set_4", points_4);
+	m_chart_data_2->AddDataset(m_data_set_4);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line_2 = new wxLineChartCtrl(m_panel_plot_2, wxID_ANY, m_chart_data_2,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data_2(m_chart_data_2->GetDatasets());
+	m_legend_line_2 = new wxChartsLegendCtrl(m_panel_plot_2, wxID_ANY, legend_data_2,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line_2->SetSize(400, 200);
 }
 
 void MyFrame1::on_close(wxCloseEvent& event) {
@@ -193,6 +267,27 @@ void MyFrame1::on_menu_sel_update_db(wxCommandEvent& event) {
 	}
 	catch (std::exception& e) {
 		::wxMessageBox(e.what(), "Îøèáêà");
+	}
+}
+
+void MyFrame1::on_menu_sel_delete_row(wxCommandEvent& event) {
+
+	try {
+		const std::string cur = m_combobox_table->GetValue().c_str().AsChar();
+		g_database_handler->delete_data(cur, m_caches_cargos[cur], m_selected_row);
+	}
+	catch (std::exception& e) {
+		::wxMessageBox(e.what(), "Îøèáêà");
+	}
+}
+
+void MyFrame1::on_menu_sel_add_row(wxCommandEvent& event) {
+
+	if (!m_caches_cargos.empty()) {
+		const std::string cur = m_combobox_table->GetValue().c_str().AsChar();
+
+		m_caches_cargos[cur].new_line();
+		this->set_table_values_by_cargo(m_caches_cargos[cur]);
 	}
 }
 
@@ -322,8 +417,22 @@ void MyFrame1::on_menu_sel_help(wxCommandEvent& event) {
 
 void MyFrame1::on_combobox_sel(wxCommandEvent& event) {
 
-	std::string cur = m_combobox_table->GetValue().c_str().AsChar();
+	const std::string cur = m_combobox_table->GetValue().c_str().AsChar();
 	this->set_table_values_by_cargo(m_caches_cargos[cur]);
+}
+
+void MyFrame1::on_grid_cell_change(wxGridEvent& event) {
+
+	if (!m_caches_cargos.empty()) {
+		const std::string cur = m_combobox_table->GetValue().c_str().AsChar();
+		const std::string value = m_grid_table->GetCellValue(event.GetRow(), event.GetCol()).c_str().AsChar();
+		m_caches_cargos[cur].set_data(event.GetRow() + 1, event.GetCol(), value);
+	}
+}
+
+void MyFrame1::on_grid_cell_select(wxGridEvent& event) {
+
+	m_selected_row = event.GetRow();
 }
 
 void MyFrame1::on_button_click_apply_filters(wxCommandEvent& event) {
@@ -441,6 +550,14 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_menuitem_update_db = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Update")), wxEmptyString, wxITEM_NORMAL);
 	m_menu2->Append(m_menuitem_update_db);
 
+	wxMenuItem* m_menuitem_delete_row;
+	m_menuitem_delete_row = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Delete Row")), wxEmptyString, wxITEM_NORMAL);
+	m_menu2->Append(m_menuitem_delete_row);
+
+	wxMenuItem* m_menuitem_add_row;
+	m_menuitem_add_row = new wxMenuItem(m_menu2, wxID_ANY, wxString(wxT("Add Row")), wxEmptyString, wxITEM_NORMAL);
+	m_menu2->Append(m_menuitem_add_row);
+
 	m_menubar4->Append(m_menu2, wxT("Database"));
 
 	m_menu31 = new wxMenu();
@@ -462,8 +579,12 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer1;
 	bSizer1 = new wxBoxSizer(wxVERTICAL);
 
+	m_staticText22 = new wxStaticText(this, wxID_ANY, wxT("Table Editor"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText22->Wrap(-1);
+	m_staticText22->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+	m_staticText22->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION));
 
-	bSizer1->Add(0, 5, 0, wxEXPAND, 5);
+	bSizer1->Add(m_staticText22, 0, wxALL | wxEXPAND, 5);
 
 	wxBoxSizer* bSizer8;
 	bSizer8 = new wxBoxSizer(wxVERTICAL);
@@ -526,32 +647,43 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer39;
 	bSizer39 = new wxBoxSizer(wxVERTICAL);
 
-	m_staticText11 = new wxStaticText(this, wxID_ANY, wxT("Market Value Plot"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText11 = new wxStaticText(this, wxID_ANY, wxT("Plots"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText11->Wrap(-1);
-	bSizer39->Add(m_staticText11, 0, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL | wxALL, 5);
+	m_staticText11->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+	m_staticText11->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION));
 
-	wxBoxSizer* bSizer40;
-	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
+	bSizer39->Add(m_staticText11, 0, wxALL | wxEXPAND, 5);
+
+	wxBoxSizer* bSizer41;
+	bSizer41 = new wxBoxSizer(wxHORIZONTAL);
 
 	m_staticText21 = new wxStaticText(this, wxID_ANY, wxT("Coin"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText21->Wrap(-1);
-	bSizer40->Add(m_staticText21, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+	bSizer41->Add(m_staticText21, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	m_combobox_plot_coin = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-	bSizer40->Add(m_combobox_plot_coin, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+	bSizer41->Add(m_combobox_plot_coin, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	m_checkbox_compare_plot = new wxCheckBox(this, wxID_ANY, wxT("Compare"), wxDefaultPosition, wxDefaultSize, 0);
-	bSizer40->Add(m_checkbox_compare_plot, 0, wxALIGN_CENTER_VERTICAL, 5);
+	bSizer41->Add(m_checkbox_compare_plot, 0, wxALIGN_CENTER_VERTICAL, 5);
 
 	m_combobox_plot_coin_compare = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-	bSizer40->Add(m_combobox_plot_coin_compare, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+	bSizer41->Add(m_combobox_plot_coin_compare, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	bSizer39->Add(bSizer40, 0, wxEXPAND, 5);
+
+	bSizer39->Add(bSizer41, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer42;
-	bSizer42 = new wxBoxSizer(wxVERTICAL);
+	bSizer42 = new wxBoxSizer(wxHORIZONTAL);
+
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer(wxVERTICAL);
 
 	m_panel_plot = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(400, 200), wxTAB_TRAVERSAL);
+
+	m_staticText266 = new wxStaticText(this, wxID_ANY, wxT("Market Value"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText266->Wrap(-1);
+	bSizer33->Add(m_staticText266, 0, wxALL, 5);
 
 	wxVector<wxString> labels;
 	m_chart_data = wxChartsCategoricalData::make_shared(labels);
@@ -567,8 +699,35 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 
 	m_chart_line->SetSize(400, 200);
 
-	bSizer42->Add(m_panel_plot, 1, wxEXPAND | wxALL, 5);
+	bSizer33->Add(m_panel_plot, 1, wxEXPAND | wxALL, 5);
 
+	bSizer42->Add(bSizer33, 1, wxEXPAND, 5);
+
+	wxBoxSizer* bSizer421;
+	bSizer421 = new wxBoxSizer(wxVERTICAL);
+
+	m_panel_plot_2 = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(400, 200), wxTAB_TRAVERSAL);
+
+	m_staticText266 = new wxStaticText(this, wxID_ANY, wxT("Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText266->Wrap(-1);
+	bSizer421->Add(m_staticText266, 0, wxALL, 5);
+
+	wxVector<wxString> labels_2;
+	m_chart_data_2 = wxChartsCategoricalData::make_shared(labels);
+
+	// Create the line chart widget from the constructed data
+	m_chart_line_2 = new wxLineChartCtrl(m_panel_plot_2, wxID_ANY, m_chart_data_2,
+		wxCHARTSLINETYPE_STRAIGHT, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	// Create the legend widget
+	wxChartsLegendData legend_data_2(m_chart_data_2->GetDatasets());
+	m_legend_line_2 = new wxChartsLegendCtrl(m_panel_plot_2, wxID_ANY, legend_data_2,
+		wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+
+	m_chart_line_2->SetSize(400, 200);
+
+	bSizer421->Add(m_panel_plot_2, 1, wxEXPAND | wxALL, 5);
+	bSizer42->Add(bSizer421, 1, wxEXPAND, 5);
 
 	bSizer39->Add(bSizer42, 0, wxEXPAND, 5);
 
@@ -579,22 +738,17 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	bSizer2->Add(bSizer12, 1, wxEXPAND, 5);
 
 
-	bSizer2->Add(100, 0, 0, wxEXPAND, 5);
+	bSizer1->Add(bSizer2, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer13;
 	bSizer13 = new wxBoxSizer(wxVERTICAL);
 
-	wxBoxSizer* bSizer14;
-	bSizer14 = new wxBoxSizer(wxVERTICAL);
-
 	m_staticText2 = new wxStaticText(this, wxID_ANY, wxT("Filters"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText2->Wrap(-1);
 	m_staticText2->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+	m_staticText2->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION));
 
-	bSizer14->Add(m_staticText2, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
-
-
-	bSizer13->Add(bSizer14, 0, wxEXPAND, 5);
+	bSizer13->Add(m_staticText2, 0, wxALL | wxEXPAND, 5);
 
 	wxBoxSizer* bSizer16;
 	bSizer16 = new wxBoxSizer(wxVERTICAL);
@@ -732,7 +886,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	bSizer1611->Add(bSizer23211, 0, wxEXPAND, 5);
 
 
-	bSizer13->Add(bSizer1611, 1, wxEXPAND, 5);
+	bSizer13->Add(bSizer1611, 0, wxEXPAND, 5);
 
 	wxBoxSizer* bSizer15;
 	bSizer15 = new wxBoxSizer(wxHORIZONTAL);
@@ -747,10 +901,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	bSizer13->Add(bSizer15, 1, wxEXPAND, 5);
 
 
-	bSizer2->Add(bSizer13, 1, wxEXPAND, 5);
-
-
-	bSizer1->Add(bSizer2, 0, wxEXPAND, 5);
+	bSizer1->Add(bSizer13, 1, wxEXPAND, 5);
 
 
 	this->SetSizer(bSizer1);
@@ -764,6 +915,10 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_update_db), this, m_menuitem_update_db->GetId());
 	m_menu31->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_parse), this, m_menuitem_parse->GetId());
 	m_menu3->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_help), this, m_menuitem_help->GetId());
+	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_delete_row), this, m_menuitem_delete_row->GetId());
+	m_menu2->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame1::on_menu_sel_add_row), this, m_menuitem_add_row->GetId());
+	m_grid_table->Connect(wxEVT_GRID_CELL_CHANGED, wxGridEventHandler(MyFrame1::on_grid_cell_change), NULL, this);
+	m_grid_table->Connect(wxEVT_GRID_SELECT_CELL, wxGridEventHandler(MyFrame1::on_grid_cell_select), NULL, this);
 	m_combobox_table->Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);
@@ -791,6 +946,8 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 MyFrame1::~MyFrame1() {
 
 	this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(MyFrame1::on_close));
+	m_grid_table->Disconnect(wxEVT_GRID_CELL_CHANGED, wxGridEventHandler(MyFrame1::on_grid_cell_change), NULL, this);
+	m_grid_table->Disconnect(wxEVT_GRID_SELECT_CELL, wxGridEventHandler(MyFrame1::on_grid_cell_select), NULL, this);
 	m_combobox_table->Disconnect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(MyFrame1::on_combobox_sel), NULL, this);
 	m_button_apply_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_apply_filters), NULL, this);
 	m_button_clear_filters->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MyFrame1::on_button_click_clear_filters), NULL, this);

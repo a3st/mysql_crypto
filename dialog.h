@@ -55,7 +55,7 @@ protected:
 
 public:
 
-	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 150), long style = wxDEFAULT_DIALOG_STYLE);
+	MyDialog1(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(291, 160), long style = wxDEFAULT_DIALOG_STYLE);
 	~MyDialog1();
 
 	Delegate db_connected;

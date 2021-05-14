@@ -37,6 +37,10 @@ public:
 		m_cur++;
 	}
 
+	void set_data(const uint32_t row, const uint32_t col, const T& data) {
+		m_data[row][col] = data;
+	}
+
 	T get_data(const uint32_t row, const uint32_t col) const {
 		return m_data[row][col];
 	}
