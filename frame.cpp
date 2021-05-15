@@ -756,7 +756,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer23;
 	bSizer23 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_market_val = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Market Value ($)"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_market_val = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Market Value:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_market_val->Wrap(-1);
 	bSizer23->Add(m_text_min_max_market_val, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -776,7 +776,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer231;
 	bSizer231 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_dominance = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Dominance (%)"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_dominance = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Dominance:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_dominance->Wrap(-1);
 	bSizer231->Add(m_text_min_max_dominance, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -802,7 +802,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer232;
 	bSizer232 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_blocks = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Blocks"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_blocks = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Blocks:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_blocks->Wrap(-1);
 	bSizer232->Add(m_text_min_max_blocks, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -822,7 +822,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer233;
 	bSizer233 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_transactions = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_transactions = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Transactions:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_transactions->Wrap(-1);
 	bSizer233->Add(m_text_min_max_transactions, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -848,7 +848,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer2321;
 	bSizer2321 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_mem_transcations = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Transactions"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_mem_transcations = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum Memory Pool Transactions:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_mem_transcations->Wrap(-1);
 	bSizer2321->Add(m_text_min_max_mem_transcations, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -868,7 +868,7 @@ MyFrame1::MyFrame1(const wxString& title, const wxPoint& pos, const wxSize& size
 	wxBoxSizer* bSizer23211;
 	bSizer23211 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_text_min_max_mem_tps = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum TPS"), wxDefaultPosition, wxDefaultSize, 0);
+	m_text_min_max_mem_tps = new wxStaticText(this, wxID_ANY, wxT("Minimum - Maximum TPS:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_text_min_max_mem_tps->Wrap(-1);
 	bSizer23211->Add(m_text_min_max_mem_tps, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
